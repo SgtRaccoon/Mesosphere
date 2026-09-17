@@ -1,7 +1,9 @@
 <template>
   <div id="app-root">
     <TopBar>
-      <button type="button" class="split-toggle" @click="split = !split">Split View</button>
+      <button type="button" class="split-toggle" @click="split = !split">
+        <Icon name="columns-two" /> Split View
+      </button>
     </TopBar>
     <SplitView v-if="split" :panes="panes">
       <template #default="{ pane, index }">
@@ -16,6 +18,7 @@
 import TopBar from "./components/TopBar.vue";
 import SplitView from "./components/SplitView.vue";
 import PaneWorkspace from "./components/PaneWorkspace.vue";
+import Icon from "./components/Icon.vue";
 
 function emptyPane() {
   return { repo: null, tab: "docs", picking: true };
@@ -23,7 +26,7 @@ function emptyPane() {
 
 export default {
   name: "App",
-  components: { TopBar, SplitView, PaneWorkspace },
+  components: { TopBar, SplitView, PaneWorkspace, Icon },
   data() {
     return {
       repos: [],

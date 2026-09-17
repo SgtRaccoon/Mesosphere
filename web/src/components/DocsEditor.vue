@@ -7,14 +7,17 @@
       :title="editing ? 'Save' : 'Edit'"
       @click="editing ? $emit('save') : $emit('edit')"
     >
-      {{ editing ? "Save" : "✎" }}
+      <Icon :name="editing ? 'save' : 'file-text'" /> {{ editing ? "Save" : "Edit" }}
     </button>
   </div>
 </template>
 
 <script>
+import Icon from "./Icon.vue";
+
 export default {
   name: "DocsEditor",
+  components: { Icon },
   props: {
     editing: { type: Boolean, default: false },
     draft: { type: String, default: "" },

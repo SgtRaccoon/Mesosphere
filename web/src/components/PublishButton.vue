@@ -8,7 +8,7 @@
       @click="$emit('publish')"
     >
       <span v-if="publishing" class="spinner" aria-hidden="true"></span>
-      {{ publishing ? "Publishing…" : "Publish" }}
+      <Icon name="upload" /> {{ publishing ? "Publishing…" : "Publish" }}
     </button>
     <div v-if="error" class="publish-modal" role="alertdialog">
       <p>{{ error }}</p>
@@ -18,8 +18,11 @@
 </template>
 
 <script>
+import Icon from "./Icon.vue";
+
 export default {
   name: "PublishButton",
+  components: { Icon },
   props: {
     visible: { type: Boolean, default: false },
     publishing: { type: Boolean, default: false },

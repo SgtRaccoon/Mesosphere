@@ -41,6 +41,18 @@ const state = {
   pollTimer: null,
 };
 
+function icon(name) {
+  const inner = {
+    "columns-two": '<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M12 3v18" />',
+    "file-text": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
+    "list-todo": '<rect x="3" y="5" width="6" height="6" rx="1" /><path d="m3 17 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" />',
+    upload:
+      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />',
+    save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+  }[name];
+  return `<svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -66,7 +78,7 @@ function renderTree(node, paneIndex, depth) {
   }
   for (const file of node.files || []) {
     const p = state.panes[paneIndex];
-    html += `<button type="button" class="docs-nav-item${file.path === p.activePath ? " active" : ""}" data-pane="${paneIndex}" data-path="${escapeHtml(file.path)}" style="padding-left:${0.5 + depth * 0.75}rem">${escapeHtml(file.name || file.path)}</button>`;
+    html += `<button type="button" class="docs-nav-item${file.path === p.activePath ? " active" : ""}" data-pane="${paneIndex}" data-path="${escapeHtml(file.path)}" style="padding-left:${0.5 + depth * 0.75}rem">${icon("file-text")} ${escapeHtml(file.name || file.path)}</button>`;
   }
   return html;
 }
@@ -119,7 +131,7 @@ function renderDocs(pane, i) {
     ? `<textarea class="docs-editor-textarea" data-pane="${i}">${escapeHtml(pane.draft)}</textarea>`
     : markdownToHtml(pane.content, pane.activePath);
   const fab = pane.activePath
-    ? `<button type="button" class="docs-edit-fab" data-pane="${i}">${pane.editing ? "Save" : "✎"}</button>`
+    ? `<button type="button" class="docs-edit-fab" data-pane="${i}">${pane.editing ? icon("save") + " Save" : icon("file-text") + " Edit"}</button>`
     : "";
   const opts = (pane.versions || [])
     .map((v) => {
@@ -196,7 +208,7 @@ function renderPane(pane, i) {
   if (!pane.repo || pane.picking) return repoCards(i);
   const name = escapeHtml(pane.repo.name || pane.repo.id);
   const publishBtn = pane.unpublished
-    ? `<button type="button" class="publish-btn" data-pane="${i}" ${state.publishing ? "disabled" : ""}>${state.publishing ? "Publishing…" : "Publish"}</button>`
+    ? `<button type="button" class="publish-btn" data-pane="${i}" ${state.publishing ? "disabled" : ""}>${icon("upload")} ${state.publishing ? "Publishing…" : "Publish"}</button>`
     : "";
   const refresh =
     pane.behind > 0
@@ -206,10 +218,10 @@ function renderPane(pane, i) {
       ${refresh}
       <button type="button" class="pane-bar-repo" data-pane="${i}">${name}</button>
       <nav class="pane-bar-tabs">
-        <button type="button" data-pane="${i}" data-tab="docs" class="${pane.tab === "docs" ? "active" : ""}">Docs</button>
-        <button type="button" data-pane="${i}" data-tab="tasks" class="${pane.tab === "tasks" ? "active" : ""}">Tasks</button>
-        ${publishBtn}
+        <button type="button" data-pane="${i}" data-tab="docs" class="${pane.tab === "docs" ? "active" : ""}">${icon("file-text")} Docs</button>
+        <button type="button" data-pane="${i}" data-tab="tasks" class="${pane.tab === "tasks" ? "active" : ""}">${icon("list-todo")} Tasks</button>
       </nav>
+      ${publishBtn}
     </header>`;
   const body = pane.tab === "docs" ? renderDocs(pane, i) : renderTasks(pane, i);
   return `${bar}${body}`;
@@ -234,7 +246,7 @@ async function render() {
   app.innerHTML = `<header class="top-bar">
         <div class="top-bar-left">Mesosphere</div>
         <nav class="top-bar-right">
-          <button type="button" class="split-toggle">Split View</button>
+          <button type="button" class="split-toggle">${icon("columns-two")} Split View</button>
         </nav>
       </header>${workspace}${modal}`;
 

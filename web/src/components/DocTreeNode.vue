@@ -14,16 +14,18 @@
       :class="{ active: file.path === activePath }"
       @click="$emit('select', file)"
     >
-      {{ file.name || file.path }}
+      <Icon name="file-text" /> {{ file.name || file.path }}
     </button>
   </div>
 </template>
 
 <script>
 import { childDirs } from "../assets/docs-tree.js";
+import Icon from "./Icon.vue";
 
 export default {
   name: "DocTreeNode",
+  components: { Icon },
   props: {
     node: { type: Object, required: true },
     activePath: { type: String, default: "" },
