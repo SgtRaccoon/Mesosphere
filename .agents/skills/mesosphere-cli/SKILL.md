@@ -1,6 +1,11 @@
+---
+name: mesosphere-cli
+description: Use this skill to operate Mesosphere from an AI assistant. All project docs and tasks live in git repositories listed in `~/.mesosphere/config.yaml` (override home with `MESOSPHERE_HOME`).
+---
+
 # Mesosphere CLI (Agent Skill)
 
-Use this skill to operate Mesosphere from an AI assistant. All project docs and tasks live in git repositories listed in `~/.mesosphere/config.yaml` (override home with `MESOSPHERE_HOME`).
+Use this skill to operate Mesosphere from an AI assistant.
 
 ## Invocation
 
