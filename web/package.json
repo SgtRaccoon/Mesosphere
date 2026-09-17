@@ -1,0 +1,10 @@
+{
+  "name": "mesosphere-web",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node -e \"const fs=require('fs');const p=require('path');function cp(s,d){fs.mkdirSync(p.dirname(d),{recursive:true});if(fs.statSync(s).isDirectory()){for(const n of fs.readdirSync(s))cp(p.join(s,n),p.join(d,n));}else fs.copyFileSync(s,d);}cp('src','dist');\"",
+    "test:unit": "node src/components/ui.test.mjs"
+  }
+}

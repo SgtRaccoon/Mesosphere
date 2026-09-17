@@ -1,0 +1,1512 @@
+{
+  "version": "0.1.0",
+  "projectId": "mesosphere",
+  "lastUpdated": "2026-03-23T22:00:00Z",
+  "summary": {
+    "total": 31,
+    "pending": 0,
+    "ready": 0,
+    "in_progress": 0,
+    "completed": 31,
+    "blocked": 0,
+    "escalated": 0,
+    "needs_human": 0
+  },
+  "tasks": [
+    {
+      "id": "TSK-001",
+      "title": "Initialize Go Project & Directory Structure",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "designRefs": [
+        "DESIGN.md#1-design-summary",
+        "DESIGN.md#2-architecture--component-boundaries"
+      ],
+      "dependencies": [],
+      "contextTriggers": [
+        "go.mod",
+        "main.go"
+      ],
+      "allowedFiles": [
+        "go.mod",
+        "go.sum",
+        "main.go",
+        "cmd/doc.go",
+        "pkg/core/doc.go",
+        "pkg/server/doc.go",
+        "pkg/git/doc.go"
+      ],
+      "actions": [
+        "Initialize `go.mod` for `github.com/mesosphere/mesosphere` (or local module name).",
+        "Set up directory structure (`cmd/`, `pkg/core/`, `pkg/git/`, `pkg/server/`, `web/`).",
+        "Create minimal `main.go` entry point.",
+        "Ensure `go build` compiles cleanly."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "go build ./...",
+        "successCriteria": [
+          "`go build ./...` succeeds without errors.",
+          "Directory skeleton matches DESIGN.md package structure."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 1,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-002",
+      "title": "Implement Configuration Data Model & Persistence Service",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-001",
+        "FR-026"
+      ],
+      "designRefs": [
+        "DESIGN.md#51-configuration-schema-mesosphereconfigyaml",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [],
+      "contextTriggers": [
+        "pkg/core/config/"
+      ],
+      "allowedFiles": [
+        "pkg/core/config/config.go",
+        "pkg/core/config/config_test.go"
+      ],
+      "actions": [
+        "Define `Config`, `Settings`, `UISettings`, `RepositoryConfig`, `CredentialsConfig` Go structs matching Section 5.1.",
+        "Implement discovery/resolution for default path (`~/.mesosphere/config.yaml`).",
+        "Implement `LoadConfig()` using YAML parsing (e.g. `gopkg.in/yaml.v3`).",
+        "Implement `SaveConfig()` to serialize updated configuration to disk safely.",
+        "Implement default config generation if config file does not exist."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/config"
+        ],
+        "regressionCommand": "go test ./pkg/core/config/...",
+        "successCriteria": [
+          "Unit tests verify loading valid config, saving updated config, and handling missing config file with defaults.",
+          "Supports multiple repositories and UI state options."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-003",
+      "title": "Implement Web Application Skeleton & Embedding Stub",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-013"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#8-frontend-architecture--static-asset-embedding"
+      ],
+      "dependencies": [],
+      "contextTriggers": [
+        "web/"
+      ],
+      "allowedFiles": [
+        "web/package.json",
+        "web/src/**",
+        "web/dist/index.html",
+        "pkg/server/embed.go"
+      ],
+      "actions": [
+        "Initialize frontend build setup in `/web` (HTML/CSS/JS or framework like Vue/React/Svelte).",
+        "Configure build output to standard static assets in `web/dist/` with relative asset links (`./assets/...`).",
+        "Set up `pkg/server/embed.go` using `//go:embed all:dist` to embed `web/dist` at compile time.",
+        "Provide a fallback minimal `index.html` in `web/dist` so Go build works even before full UI build."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "`//go:embed` compiles properly in Go package `pkg/server`.",
+          "Build scripts generate static assets in `web/dist/`."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 1,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-004",
+      "title": "Implement Git Command Execution Engine",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-018",
+        "FR-019",
+        "FR-024",
+        "FR-025",
+        "FR-027",
+        "FR-030"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#11-open-design-decisions--assumptions"
+      ],
+      "dependencies": [
+        "TSK-001"
+      ],
+      "contextTriggers": [
+        "pkg/git/"
+      ],
+      "allowedFiles": [
+        "pkg/git/git.go",
+        "pkg/git/git_test.go"
+      ],
+      "actions": [
+        "Implement Go wrapper around system `git` executable (`os/exec`).",
+        "Implement methods for `Commit(repoPath, filePath, message)`, `Pull(repoPath)`, `Push(repoPath)`, `Fetch(repoPath)`. ",
+        "Implement `GetDocHistory(repoPath, filePath)` and `GetDocVersionContent(repoPath, filePath, commitHash)`.",
+        "Implement `CheckRepoStatus(repoPath)` to detect uncommitted local changes and behind/ahead commit counts relative to tracking branch.",
+        "Handle git process error output and git conflict detection during pull/push."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/git"
+        ],
+        "regressionCommand": "go test ./pkg/git/...",
+        "successCriteria": [
+          "Unit tests against temporary git repositories verify commit, status check, history extraction, and pull/push handling."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-005",
+      "title": "Implement Repository Working Context Resolver Engine",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-003",
+        "FR-009",
+        "FR-026"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-002"
+      ],
+      "contextTriggers": [
+        "pkg/core/repo/"
+      ],
+      "allowedFiles": [
+        "pkg/core/repo/repo.go",
+        "pkg/core/repo/repo_test.go"
+      ],
+      "actions": [
+        "Implement repository list and resolution logic in core logic layer.",
+        "Implement `GetRepositoryContext(cwd, repoFlag)`.",
+        "If explicit `repoFlag` supplied, match against config repository IDs or paths.",
+        "If `repoFlag` omitted, match `cwd` against configured repository paths.",
+        "If `cwd` is not a configured repo and no `repoFlag` provided, return an explicit context resolution error."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/repo"
+        ],
+        "regressionCommand": "go test ./pkg/core/repo/...",
+        "successCriteria": [
+          "Tests confirm matching `cwd` to configured repos.",
+          "Tests confirm explicit `repoFlag` override.",
+          "Tests confirm error returned when `cwd` is unconfigured and no flag passed."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-006",
+      "title": "Implement Document Discovery and Version History Engine",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-027"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-004",
+        "TSK-005"
+      ],
+      "contextTriggers": [
+        "pkg/core/docs/"
+      ],
+      "allowedFiles": [
+        "pkg/core/docs/docs.go",
+        "pkg/core/docs/docs_test.go"
+      ],
+      "actions": [
+        "Implement file tree walker in repo root to locate all `.md` and `.txt` files.",
+        "Implement `ListDocuments(repoPath)` returning relative file paths and summaries.",
+        "Implement `ListDocumentVersions(repoPath, docPath)` using git history wrapper.",
+        "Implement `GetDocument(repoPath, docPath, version)` returning document text (current HEAD if `version` empty, or specified historical commit content)."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/docs"
+        ],
+        "regressionCommand": "go test ./pkg/core/docs/...",
+        "successCriteria": [
+          "Unit tests find all markdown files in a test git repo.",
+          "Unit tests correctly extract historical commit version content."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-007",
+      "title": "Implement Document Save Core Logic",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-011",
+        "FR-017",
+        "FR-018"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-004",
+        "TSK-006"
+      ],
+      "contextTriggers": [
+        "pkg/core/docs/"
+      ],
+      "allowedFiles": [
+        "pkg/core/docs/docs_save.go",
+        "pkg/core/docs/docs_test.go"
+      ],
+      "actions": [
+        "Implement `SaveDocument(repoPath, docPath, content, commitMsg)`.",
+        "Write raw content to target file path on disk within repository.",
+        "Execute local git commit via git engine with clear commit message (`update(mesosphere): <filename>`)."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/docs"
+        ],
+        "regressionCommand": "go test ./pkg/core/docs/...",
+        "successCriteria": [
+          "Unit test saves modified content to disk and verifies a new git commit was created."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-008",
+      "title": "Implement Common Task Representation Model & Pluggable Framework Translator Engine",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-007",
+        "FR-008",
+        "FR-021",
+        "FR-029"
+      ],
+      "designRefs": [
+        "DESIGN.md#52-unified-internal-task-schema-pkgcoretasksmodelgo",
+        "DESIGN.md#53-kanban-column-derive-rule"
+      ],
+      "dependencies": [
+        "TSK-001"
+      ],
+      "contextTriggers": [
+        "pkg/core/tasks/"
+      ],
+      "allowedFiles": [
+        "pkg/core/tasks/model.go",
+        "pkg/core/tasks/translator.go",
+        "pkg/core/tasks/translator_test.go"
+      ],
+      "actions": [
+        "Define `CommonTask` struct as specified in Section 5.2 (`CardID`, `Scope`, `ValidationGate`, `IsBlocked`, `BlockerID`, `Status`, `RawContent`, `FilePath`, `RepoID`, `ExtraFields`).",
+        "Implement framework detection and schema translation adapters for GitHub Spec Kit, OpenSpec, BMAD-METHOD, Amazon Kiro, Augment Cosmos, and simple JSON/Markdown checkbox task formats.",
+        "Implement `ListTasks(repoPath)` scanning repository for supported task files.",
+        "Implement `GetTask(repoPath, taskID)` retrieving specific task details."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/tasks"
+        ],
+        "regressionCommand": "go test ./pkg/core/tasks/...",
+        "successCriteria": [
+          "Unit tests translate sample task files from different frameworks into `CommonTask` structs.",
+          "Verifies field mapping accuracy for CardID, Scope, ValidationGate, IsBlocked, and Status."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "high",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-009",
+      "title": "Implement Task Edit & Save Core Logic",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-023",
+        "FR-024"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-004",
+        "TSK-008"
+      ],
+      "contextTriggers": [
+        "pkg/core/tasks/"
+      ],
+      "allowedFiles": [
+        "pkg/core/tasks/tasks_save.go",
+        "pkg/core/tasks/translator_test.go"
+      ],
+      "actions": [
+        "Implement `SaveTask(repoPath, taskID, rawJSON, commitMsg)`.",
+        "Validate JSON payload structure.",
+        "Overwrites or updates raw task file on filesystem.",
+        "Executes local git commit via git engine (`update(mesosphere): task <taskID>`)."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/tasks"
+        ],
+        "regressionCommand": "go test ./pkg/core/tasks/...",
+        "successCriteria": [
+          "Unit test updates task raw JSON and verifies new local git commit."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-010",
+      "title": "Implement Repository Sync & Publish Core Logic",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-019",
+        "FR-025",
+        "FR-031"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-004",
+        "TSK-005"
+      ],
+      "contextTriggers": [
+        "pkg/core/repo/"
+      ],
+      "allowedFiles": [
+        "pkg/core/repo/sync.go",
+        "pkg/core/repo/sync_test.go"
+      ],
+      "actions": [
+        "Implement `SyncRepository(repoPath)` executing `git pull`.",
+        "Implement `PublishRepository(repoPath)` executing `git pull` followed by `git push`.",
+        "Capture git conflict errors during pull and return structured conflict error.",
+        "Provide status query logic for unpushed commits and remote divergence."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/core/repo"
+        ],
+        "regressionCommand": "go test ./pkg/core/repo/...",
+        "successCriteria": [
+          "Unit tests simulate successful publish.",
+          "Unit tests simulate conflict detection during publish and verify conflict error reporting."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-011",
+      "title": "Implement Cobra CLI Framework & Launcher Logic",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#31-binary-launch-resolution-flow"
+      ],
+      "dependencies": [
+        "TSK-001"
+      ],
+      "contextTriggers": [
+        "cmd/"
+      ],
+      "allowedFiles": [
+        "cmd/root.go",
+        "cmd/serve.go",
+        "main.go"
+      ],
+      "actions": [
+        "Integrate `github.com/spf13/cobra` in `cmd/root.go`.",
+        "Implement argument routing: if CLI subcommands provided, delegate to Cobra.",
+        "If zero arguments passed or `serve` subcommand executed, launch HTTP server mode."
+      ],
+      "verification": {
+        "targetedTests": [
+          "cmd"
+        ],
+        "regressionCommand": "go test ./cmd/...",
+        "successCriteria": [
+          "Running binary with `--help` prints Cobra CLI help menu.",
+          "Running binary with zero arguments invokes server entry point."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-012",
+      "title": "Implement CLI Commands: Repo & Config Operations",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-002",
+        "TSK-005",
+        "TSK-011"
+      ],
+      "contextTriggers": [
+        "cmd/repo.go"
+      ],
+      "allowedFiles": [
+        "cmd/repo.go",
+        "cmd/repo_test.go"
+      ],
+      "actions": [
+        "Implement `mesosphere repo list` CLI subcommand using Core Engine `ListRepositories`.",
+        "Format output cleanly in stdout (e.g., table or list view).",
+        "Support `--json` flag for machine-readable JSON output."
+      ],
+      "verification": {
+        "targetedTests": [
+          "cmd"
+        ],
+        "regressionCommand": "go test ./cmd/...",
+        "successCriteria": [
+          "`mesosphere repo list` outputs configured repositories to stdout."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 1,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-013",
+      "title": "Implement CLI Commands: Document Operations",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-009"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-005",
+        "TSK-006",
+        "TSK-011"
+      ],
+      "contextTriggers": [
+        "cmd/doc.go"
+      ],
+      "allowedFiles": [
+        "cmd/doc.go",
+        "cmd/doc_test.go"
+      ],
+      "actions": [
+        "Implement `mesosphere doc list [--repo <id>]`.",
+        "Implement `mesosphere doc versions <doc-path> [--repo <id>]`.",
+        "Implement `mesosphere doc get <doc-path> [--version <hash>] [--repo <id>]`.",
+        "Use `GetRepositoryContext` to enforce CWD / `--repo` context resolution rules."
+      ],
+      "verification": {
+        "targetedTests": [
+          "cmd"
+        ],
+        "regressionCommand": "go test ./cmd/...",
+        "successCriteria": [
+          "CLI commands correctly list docs, list versions, and output current/historical document contents.",
+          "Errors out if CWD is not a configured repo and `--repo` is omitted."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-014",
+      "title": "Implement CLI Commands: Task Operations",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-007",
+        "FR-008",
+        "FR-009"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#61-unified-core-interface-pkgcorecorego"
+      ],
+      "dependencies": [
+        "TSK-005",
+        "TSK-008",
+        "TSK-011"
+      ],
+      "contextTriggers": [
+        "cmd/task.go"
+      ],
+      "allowedFiles": [
+        "cmd/task.go",
+        "cmd/task_test.go"
+      ],
+      "actions": [
+        "Implement `mesosphere task list [--repo <id>]`.",
+        "Implement `mesosphere task get <task-id> [--repo <id>]`.",
+        "Enforce working context resolution rules."
+      ],
+      "verification": {
+        "targetedTests": [
+          "cmd"
+        ],
+        "regressionCommand": "go test ./cmd/...",
+        "successCriteria": [
+          "CLI commands list tasks and display task details in JSON format."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-015",
+      "title": "Implement Agent Skill Definition & Package Integration",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries"
+      ],
+      "dependencies": [
+        "TSK-013",
+        "TSK-014"
+      ],
+      "contextTriggers": [
+        ".agents/skills/mesosphere-cli/"
+      ],
+      "allowedFiles": [
+        ".agents/skills/mesosphere-cli/SKILL.md"
+      ],
+      "actions": [
+        "Create `.agents/skills/mesosphere-cli/SKILL.md`.",
+        "Document available CLI commands, flags, expected inputs, and outputs for AI assistants.",
+        "Provide examples for document querying, history lookup, task details retrieval, and repo listing."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "",
+        "successCriteria": [
+          "`SKILL.md` exists and accurately describes CLI capabilities and argument structure."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 1,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-016",
+      "title": "Implement Server Engine & REST API Router",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#62-internal-rest-api-endpoints-apiv1"
+      ],
+      "dependencies": [
+        "TSK-001",
+        "TSK-003"
+      ],
+      "contextTriggers": [
+        "pkg/server/"
+      ],
+      "allowedFiles": [
+        "pkg/server/server.go",
+        "pkg/server/router.go",
+        "pkg/server/server_test.go"
+      ],
+      "actions": [
+        "Implement `net/http` server with `go-chi/chi` router in `pkg/server`.",
+        "Set up `/api/v1` route group.",
+        "Set up fallback static asset handler to serve embedded UI assets (`//go:embed web/dist`)."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "HTTP server starts cleanly on local port.",
+          "Requests to static assets return embedded files."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-017",
+      "title": "Implement Browser Auto-Launcher Component",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "designRefs": [
+        "DESIGN.md#2-architecture--component-boundaries",
+        "DESIGN.md#31-binary-launch-resolution-flow"
+      ],
+      "dependencies": [
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/browser/"
+      ],
+      "allowedFiles": [
+        "pkg/browser/browser.go"
+      ],
+      "actions": [
+        "Implement `OpenBrowser(url string)` supporting Windows (`cmd /c start`), macOS (`open`), and Linux (`xdg-open`).",
+        "Integrate auto-launch trigger into `mesosphere serve` startup routine."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/browser"
+        ],
+        "regressionCommand": "go test ./pkg/browser/...",
+        "successCriteria": [
+          "`OpenBrowser` executes OS default browser launcher without throwing unhandled errors."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 1,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-018",
+      "title": "Implement REST Endpoints: Config & Repo Management",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-001",
+        "FR-003",
+        "FR-026"
+      ],
+      "designRefs": [
+        "DESIGN.md#62-internal-rest-api-endpoints-apiv1"
+      ],
+      "dependencies": [
+        "TSK-002",
+        "TSK-005",
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/server/handlers_config.go"
+      ],
+      "allowedFiles": [
+        "pkg/server/handlers_config.go",
+        "pkg/server/handlers_test.go"
+      ],
+      "actions": [
+        "Implement `GET /api/v1/config` & `POST /api/v1/config`.",
+        "Implement `GET /api/v1/repos`.",
+        "Implement `GET /api/v1/repos/{repoID}/status` returning uncommitted changes and behind counts."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "REST endpoint unit tests return 200 OK with valid config and repository lists."
+        ]
+      },
+      "risk": "low",
+      "complexity": "low",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-019",
+      "title": "Implement REST Endpoints: Sync & Publish Operations",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-019",
+        "FR-025",
+        "FR-031",
+        "FR-034"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence",
+        "DESIGN.md#62-internal-rest-api-endpoints-apiv1"
+      ],
+      "dependencies": [
+        "TSK-010",
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/server/handlers_sync.go"
+      ],
+      "allowedFiles": [
+        "pkg/server/handlers_sync.go",
+        "pkg/server/handlers_test.go"
+      ],
+      "actions": [
+        "Implement `POST /api/v1/repos/{repoID}/sync` (`git pull`).",
+        "Implement `POST /api/v1/repos/{repoID}/publish` (`git pull` + `git push`).",
+        "Return HTTP 409 Conflict when git conflict occurs."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "Endpoints return 200 on success and 409 Conflict on git pull failure."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-020",
+      "title": "Implement REST Endpoints: Document Operations",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-018"
+      ],
+      "designRefs": [
+        "DESIGN.md#62-internal-rest-api-endpoints-apiv1"
+      ],
+      "dependencies": [
+        "TSK-006",
+        "TSK-007",
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/server/handlers_docs.go"
+      ],
+      "allowedFiles": [
+        "pkg/server/handlers_docs.go",
+        "pkg/server/handlers_test.go"
+      ],
+      "actions": [
+        "Implement `GET /api/v1/repos/{repoID}/docs`.",
+        "Implement `GET /api/v1/repos/{repoID}/docs/detail`.",
+        "Implement `GET /api/v1/repos/{repoID}/docs/versions`.",
+        "Implement `POST /api/v1/repos/{repoID}/docs/save`."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "Endpoints list documents, fetch content, fetch versions, and trigger local doc save commits."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-021",
+      "title": "Implement REST Endpoints: Task Operations",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-007",
+        "FR-008",
+        "FR-024"
+      ],
+      "designRefs": [
+        "DESIGN.md#62-internal-rest-api-endpoints-apiv1"
+      ],
+      "dependencies": [
+        "TSK-008",
+        "TSK-009",
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/server/handlers_tasks.go"
+      ],
+      "allowedFiles": [
+        "pkg/server/handlers_tasks.go",
+        "pkg/server/handlers_test.go"
+      ],
+      "actions": [
+        "Implement `GET /api/v1/repos/{repoID}/tasks`.",
+        "Implement `GET /api/v1/repos/{repoID}/tasks/{taskID}`.",
+        "Implement `POST /api/v1/repos/{repoID}/tasks/{taskID}/save`."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "Endpoints list converted tasks, return raw task details, and save modified raw task JSON."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-022",
+      "title": "Implement Background Fetch Service",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-030"
+      ],
+      "designRefs": [
+        "DESIGN.md#34-background-fetch-flow"
+      ],
+      "dependencies": [
+        "TSK-004",
+        "TSK-016"
+      ],
+      "contextTriggers": [
+        "pkg/server/fetch.go"
+      ],
+      "allowedFiles": [
+        "pkg/server/fetch.go",
+        "pkg/server/fetch_test.go"
+      ],
+      "actions": [
+        "Implement background ticker in HTTP server running every 3 minutes.",
+        "Trigger non-blocking `git fetch` for all configured repositories.",
+        "Update repo status state so `/api/v1/repos/{repoID}/status` indicates when remote upstream changes exist."
+      ],
+      "verification": {
+        "targetedTests": [
+          "pkg/server"
+        ],
+        "regressionCommand": "go test ./pkg/server/...",
+        "successCriteria": [
+          "Background ticker triggers fetch without blocking HTTP request handling.",
+          "Status API reflects behind count after fetch."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-023",
+      "title": "UI: Implement Repository Entry Point Box-Grid Selector & Top Bar",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-015"
+      ],
+      "designRefs": [
+        "DESIGN.md#4-state-model",
+        "DESIGN.md#51-configuration-schema-mesosphereconfigyaml"
+      ],
+      "dependencies": [
+        "TSK-003",
+        "TSK-018"
+      ],
+      "contextTriggers": [
+        "web/src/components/RepoSelector.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/RepoSelector.vue",
+        "web/src/components/TopBar.vue"
+      ],
+      "actions": [
+        "Implement initial box-grid selector view displaying all configured repositories.",
+        "Upon selection, render top bar displaying left-aligned selected repo name and right-aligned 'Docs' and 'Tasks' tabs."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "UI displays box-grid selector when no repo selected.",
+          "UI transitions to show top bar with repository name and section tabs when repo selected."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-024",
+      "title": "UI: Implement Navigation & Split View Layout Component",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-013",
+        "FR-014"
+      ],
+      "designRefs": [
+        "DESIGN.md#4-state-model"
+      ],
+      "dependencies": [
+        "TSK-023"
+      ],
+      "contextTriggers": [
+        "web/src/components/SplitView.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/SplitView.vue",
+        "web/src/App.vue"
+      ],
+      "actions": [
+        "Implement 'Split View' toggle button in UI top bar.",
+        "Implement dual-pane layout rendering two independent pane instances.",
+        "Apply CSS responsive rule: left/right side-by-side when viewport `width > height`, top/bottom stacked when `viewport height > width`.",
+        "Allow each pane to independently choose repo and Docs/Tasks mode (including duplicate combinations)."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Split view creates 2 independent view panes.",
+          "Layout dynamically switches between row and column based on aspect ratio."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-025",
+      "title": "UI: Implement Docs Navigation Menu & Markdown Viewer with Native Mermaid",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-011",
+        "FR-012",
+        "FR-016"
+      ],
+      "designRefs": [
+        "DESIGN.md#8-frontend-architecture--static-asset-embedding"
+      ],
+      "dependencies": [
+        "TSK-020",
+        "TSK-023"
+      ],
+      "contextTriggers": [
+        "web/src/components/DocsView.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/DocsView.vue",
+        "web/src/components/MermaidRenderer.vue"
+      ],
+      "actions": [
+        "Implement left-hand menu listing repository documents and directories.",
+        "Implement main view rendering selected markdown document.",
+        "Integrate bundled Mermaid.js library to render ```mermaid code blocks dynamically into inline SVGs.",
+        "Ensure native image rendering for relative repository image assets."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Document list renders repo files.",
+          "Markdown and embedded mermaid diagrams render natively on document selection."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "high",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-026",
+      "title": "UI: Implement Document Editing, Save & Publish Flow",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-017",
+        "FR-018",
+        "FR-019",
+        "FR-031",
+        "FR-034"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence",
+        "DESIGN.md#4-state-model"
+      ],
+      "dependencies": [
+        "TSK-019",
+        "TSK-020",
+        "TSK-025"
+      ],
+      "contextTriggers": [
+        "web/src/components/DocsEditor.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/DocsEditor.vue",
+        "web/src/components/PublishButton.vue"
+      ],
+      "actions": [
+        "Add bottom-right pencil edit icon to switch rendered doc into plain-text editor.",
+        "Change icon to Save button on edit; clicking Save invokes `/api/v1/repos/{id}/docs/save`.",
+        "Show 'Publish' button when unpushed changes exist.",
+        "Clicking Publish triggers `/api/v1/repos/{id}/publish`, disables button, and displays spinning feedback.",
+        "Display error notification modal if publish fails due to git conflicts."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Editing doc and clicking Save sends update and updates commit status.",
+          "Publish button handles loading state and git conflict errors."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-027",
+      "title": "UI: Implement Tasks Kanban Board with Schema-Derived Columns",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-020",
+        "FR-021",
+        "FR-032"
+      ],
+      "designRefs": [
+        "DESIGN.md#53-kanban-column-derive-rule"
+      ],
+      "dependencies": [
+        "TSK-021",
+        "TSK-023"
+      ],
+      "contextTriggers": [
+        "web/src/components/KanbanBoard.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/KanbanBoard.vue",
+        "web/src/components/TaskCard.vue"
+      ],
+      "actions": [
+        "Implement Kanban board component rendering tasks into dynamic columns.",
+        "Derive columns based on framework schema (binary schema -> 'TO DO' and 'DONE'; explicit status -> 1 column per status).",
+        "Render Task Card displaying CardID, truncated Scope text, and status badge."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Binary tasks render in TO DO / DONE columns.",
+          "Multi-status tasks render in matching status columns.",
+          "Card displays truncated Scope text."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "high",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-028",
+      "title": "UI: Implement Blocked Task Indicator & Popup Inspector",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-022"
+      ],
+      "designRefs": [
+        "DESIGN.md#53-kanban-column-derive-rule"
+      ],
+      "dependencies": [
+        "TSK-027"
+      ],
+      "contextTriggers": [
+        "web/src/components/BlockedIndicator.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/BlockedIndicator.vue",
+        "web/src/components/BlockerModal.vue"
+      ],
+      "actions": [
+        "Ensure tasks with `IsBlocked == true` remain in the 'TO DO' column.",
+        "Display red blocked indicator badge on the card.",
+        "Show blocker task title on hover tooltip.",
+        "Open popup modal displaying blocker task details when blocked indicator is clicked."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Blocked task remains in 'TO DO' column.",
+          "Hover reveals blocker title.",
+          "Click opens modal with blocker task info."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-029",
+      "title": "UI: Implement Task Card Editing, Raw JSON View, Save & Publish Flow",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-023",
+        "FR-024",
+        "FR-025",
+        "FR-033"
+      ],
+      "designRefs": [
+        "DESIGN.md#33-remote-sync--publish-flow-save--publish-sequence"
+      ],
+      "dependencies": [
+        "TSK-021",
+        "TSK-027"
+      ],
+      "contextTriggers": [
+        "web/src/components/TaskEditorModal.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/TaskEditorModal.vue"
+      ],
+      "actions": [
+        "Opening task card displays editable raw JSON view.",
+        "Display Save button when JSON changes are made.",
+        "Clicking Save invokes `/api/v1/repos/{id}/tasks/{taskID}/save`.",
+        "Enable Publish button for task commit and trigger publish flow on click."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Task modal displays raw JSON.",
+          "Saving JSON sends API request and triggers local git commit."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-030",
+      "title": "UI: Implement Remote Change Notification & Refresh Trigger",
+      "priority": "P1",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-030",
+        "FR-034"
+      ],
+      "designRefs": [
+        "DESIGN.md#34-background-fetch-flow"
+      ],
+      "dependencies": [
+        "TSK-019",
+        "TSK-022",
+        "TSK-023"
+      ],
+      "contextTriggers": [
+        "web/src/components/RemoteStatus.vue"
+      ],
+      "allowedFiles": [
+        "web/src/components/RemoteStatus.vue"
+      ],
+      "actions": [
+        "Poll `/api/v1/repos/{id}/status` in UI.",
+        "When remote changes are detected (`behind > 0`), display top-left refresh icon.",
+        "Clicking refresh icon triggers `/api/v1/repos/{id}/sync` (`git pull`), shows spinning feedback, and reloads current view."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "cd web && npm run test:unit",
+        "successCriteria": [
+          "Refresh icon appears top-left when repo is behind.",
+          "Clicking icon pulls latest changes and updates active view."
+        ]
+      },
+      "risk": "low",
+      "complexity": "medium",
+      "value": 2,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    },
+    {
+      "id": "TSK-031",
+      "title": "End-to-End Build Integration & Single-Binary Assembly Verification",
+      "priority": "P0",
+      "status": "completed",
+      "requirementRefs": [
+        "FR-002",
+        "FR-010"
+      ],
+      "designRefs": [
+        "DESIGN.md#1-design-summary",
+        "DESIGN.md#10-verification--test-strategy"
+      ],
+      "dependencies": [
+        "TSK-011",
+        "TSK-012",
+        "TSK-013",
+        "TSK-014",
+        "TSK-015",
+        "TSK-016",
+        "TSK-017",
+        "TSK-018",
+        "TSK-019",
+        "TSK-020",
+        "TSK-021",
+        "TSK-022",
+        "TSK-026",
+        "TSK-029",
+        "TSK-030"
+      ],
+      "contextTriggers": [
+        "main.go"
+      ],
+      "allowedFiles": [
+        "Makefile",
+        "scripts/build.sh",
+        "main.go"
+      ],
+      "actions": [
+        "Set up build script/Makefile compiling frontend assets into `web/dist` and executing `go build -o mesosphere`.",
+        "Verify complete standalone single-binary functionality in air-gapped test environment.",
+        "Verify CLI commands (`repo list`, `doc list`, `task list`) and web UI serve mode."
+      ],
+      "verification": {
+        "targetedTests": [],
+        "regressionCommand": "go test ./...",
+        "successCriteria": [
+          "Single binary `mesosphere` compiles successfully.",
+          "Binary runs headlessly or serves embedded web UI properly without external asset dependencies."
+        ]
+      },
+      "risk": "medium",
+      "complexity": "medium",
+      "value": 3,
+      "attempts": {
+        "local": 1,
+        "remote": 0
+      },
+      "humanNote": null
+    }
+  ]
+}
