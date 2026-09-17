@@ -11,9 +11,12 @@ import (
 )
 
 var (
-	getwd = os.Getwd
+	getwd      = os.Getwd
 	loadConfig = func() (*config.Config, error) {
 		return config.LoadConfig("")
+	}
+	saveConfig = func(cfg *config.Config) error {
+		return config.SaveConfig("", cfg)
 	}
 	docsEngine = &docs.Engine{}
 )

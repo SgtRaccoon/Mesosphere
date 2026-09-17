@@ -40,6 +40,21 @@ func TestListRepositories(t *testing.T) {
 	}
 }
 
+func TestAddRepository(t *testing.T) {
+	cfg := &config.Config{}
+	got, err := AddRepository(cfg, config.RepositoryConfig{Name: "Demo", Path: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID == "" || got.Name != "Demo" || len(cfg.Repositories) != 1 {
+		t.Fatalf("%+v cfg=%+v", got, cfg)
+	}
+	_, err = AddRepository(cfg, config.RepositoryConfig{ID: got.ID, Path: t.TempDir()})
+	if !errors.Is(err, ErrRepoExists) {
+		t.Fatalf("dup: %v", err)
+	}
+}
+
 func TestGetRepositoryContextByCwd(t *testing.T) {
 	cfg, main, _ := sampleConfig(t)
 	nested := filepath.Join(main, "docs")

@@ -120,3 +120,56 @@ func containsPath(root, target string) bool {
 	}
 	return true
 }
+
+// ErrRepoExists is returned when adding a repository with a duplicate ID.
+var ErrRepoExists = errors.New("repository already exists")
+
+// AddRepository appends a repository to cfg after filling defaults.
+func AddRepository(cfg *config.Config, r config.RepositoryConfig) (*config.RepositoryConfig, error) {
+	if cfg == nil {
+		return nil, errors.New("config is nil")
+	}
+	r.Path = strings.TrimSpace(r.Path)
+	if r.Path == "" {
+		return nil, errors.New("path is required")
+	}
+	abs, err := absPath(r.Path)
+	if err != nil {
+		return nil, err
+	}
+	r.Path = abs
+	if r.ID == "" {
+		r.ID = slugID(r.Name, filepath.Base(r.Path))
+	}
+	if r.Name == "" {
+		r.Name = r.ID
+	}
+	for _, existing := range cfg.Repositories {
+		if existing.ID == r.ID {
+			return nil, fmt.Errorf("%w: %s", ErrRepoExists, r.ID)
+		}
+	}
+	cfg.Repositories = append(cfg.Repositories, r)
+	return &r, nil
+}
+
+func slugID(parts ...string) string {
+	for _, p := range parts {
+		s := strings.ToLower(strings.TrimSpace(p))
+		s = strings.Map(func(r rune) rune {
+			switch {
+			case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+				return r
+			case r == '-' || r == '_' || r == ' ':
+				return '-'
+			default:
+				return -1
+			}
+		}, s)
+		s = strings.Trim(s, "-")
+		if s != "" {
+			return s
+		}
+	}
+	return "repo"
+}

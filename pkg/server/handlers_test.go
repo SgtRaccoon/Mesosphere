@@ -66,6 +66,13 @@ func TestConfigAndReposEndpoints(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
+	addBody, _ := json.Marshal(config.RepositoryConfig{Name: "Third", Path: "/tmp/third"})
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/v1/repos", bytes.NewReader(addBody)))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("POST repos %d %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/repos", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET repos %d", rec.Code)
@@ -74,7 +81,7 @@ func TestConfigAndReposEndpoints(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil {
 		t.Fatal(err)
 	}
-	if len(list) != 2 {
+	if len(list) != 3 {
 		t.Fatalf("list = %+v", list)
 	}
 

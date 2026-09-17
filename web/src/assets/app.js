@@ -31,6 +31,9 @@ function emptyPane() {
 
 const state = {
   repos: [],
+  repoStats: {},
+  addingRepo: false,
+  addRepoError: "",
   split: false,
   panes: [emptyPane(), emptyPane()],
   publishing: false,
@@ -68,18 +71,43 @@ function renderTree(node, paneIndex, depth) {
   return html;
 }
 
+function repoStatsLabel(id) {
+  const st = state.repoStats[id] || {};
+  const docs = st.docs != null ? st.docs : "…";
+  const tasks = st.tasks != null ? st.tasks : "…";
+  return `${docs} docs · ${tasks} tasks`;
+}
+
 function repoCards(paneIndex) {
   const cards = state.repos
     .map(
       (r) => `<button type="button" class="repo-card" data-pane="${paneIndex}" data-id="${escapeHtml(r.id)}">
             <strong>${escapeHtml(r.name || r.id)}</strong>
             <span>${escapeHtml(r.path || "")}</span>
+            <span class="repo-card-meta">${escapeHtml(repoStatsLabel(r.id))}</span>
           </button>`
     )
     .join("");
+  const add = state.addingRepo
+    ? `<div class="repo-card add-repo">
+          <strong>Add repository</strong>
+          <form class="repo-add-form">
+            <input name="name" placeholder="Name" required />
+            <input name="path" placeholder="Filesystem path" required />
+            <input name="id" placeholder="ID (optional)" />
+            <input name="remote_url" placeholder="Remote URL (optional)" />
+            <button type="submit">Save</button>
+            <button type="button" class="repo-add-cancel">Cancel</button>
+          </form>
+          ${state.addRepoError ? `<p class="empty">${escapeHtml(state.addRepoError)}</p>` : ""}
+        </div>`
+    : `<button type="button" class="repo-card add-repo repo-add-open">
+          <strong>+ Add repository</strong>
+          <span>Register a local git repo</span>
+        </button>`;
   return `<section class="repo-selector">
         <h1>Select a repository</h1>
-        <div class="repo-grid">${cards || ""}</div>
+        <div class="repo-grid">${cards}${add}</div>
         ${state.repos.length ? "" : '<p class="empty">No repositories configured.</p>'}
       </section>`;
 }
@@ -219,7 +247,36 @@ function paneFromEl(el) {
 }
 
 function bindEvents() {
-  app.querySelectorAll(".repo-card").forEach((btn) => {
+  const addOpen = app.querySelector(".repo-add-open");
+  if (addOpen) {
+    addOpen.addEventListener("click", () => {
+      state.addingRepo = true;
+      state.addRepoError = "";
+      render();
+    });
+  }
+  const addCancel = app.querySelector(".repo-add-cancel");
+  if (addCancel) {
+    addCancel.addEventListener("click", () => {
+      state.addingRepo = false;
+      state.addRepoError = "";
+      render();
+    });
+  }
+  const addForm = app.querySelector(".repo-add-form");
+  if (addForm) {
+    addForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData(addForm);
+      await addRepo({
+        name: String(fd.get("name") || ""),
+        path: String(fd.get("path") || ""),
+        id: String(fd.get("id") || ""),
+        remote_url: String(fd.get("remote_url") || ""),
+      });
+    });
+  }
+  app.querySelectorAll(".repo-card[data-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const i = Number(btn.dataset.pane || 0);
       const pane = state.panes[i];
@@ -312,11 +369,7 @@ function bindEvents() {
       const t = pane.tasks.find((x) => x.card_id === el.dataset.id);
       if (!t) return;
       pane.activeTask = t;
-      try {
-        pane.taskDraft = JSON.stringify(JSON.parse(t.raw_content || "{}"), null, 2);
-      } catch {
-        pane.taskDraft = t.raw_content || "{}";
-      }
+      pane.taskDraft = taskEditorJSON(t);
       pane.taskDirty = false;
       render();
     });
@@ -468,6 +521,58 @@ async function saveTask(pane) {
   await render();
 }
 
+function taskEditorJSON(t) {
+  if (!t) return "{}";
+  const extra = t.extra_fields;
+  if (extra && typeof extra === "object" && Object.keys(extra).length) {
+    return JSON.stringify(extra, null, 2);
+  }
+  return JSON.stringify(
+    {
+      card_id: t.card_id,
+      title: t.title,
+      scope: t.scope,
+      validation_gate: t.validation_gate,
+      is_blocked: t.is_blocked,
+      blocker_ids: t.blocker_ids || [],
+      status: t.status,
+    },
+    null,
+    2,
+  );
+}
+
+async function addRepo(body) {
+  state.addRepoError = "";
+  const res = await fetch("/api/v1/repos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    state.addRepoError = err.error || "Could not add repository";
+    await render();
+    return;
+  }
+  state.addingRepo = false;
+  await load();
+}
+
+async function loadRepoStats() {
+  await Promise.all(
+    (state.repos || []).map(async (r) => {
+      const [docsRes, tasksRes] = await Promise.all([
+        fetch(`/api/v1/repos/${r.id}/docs`),
+        fetch(`/api/v1/repos/${r.id}/tasks`),
+      ]);
+      const docs = docsRes.ok ? await docsRes.json() : [];
+      const tasks = tasksRes.ok ? await tasksRes.json() : [];
+      state.repoStats[r.id] = { docs: docs.length || 0, tasks: tasks.length || 0 };
+    }),
+  );
+}
+
 async function load() {
   try {
     const res = await fetch("/api/v1/repos");
@@ -475,6 +580,7 @@ async function load() {
   } catch (_) {
     state.repos = [];
   }
+  await loadRepoStats();
   await render();
 }
 

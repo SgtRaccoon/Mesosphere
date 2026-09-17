@@ -75,12 +75,48 @@ function renderTable(rows, docPath) {
   return `<table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
 }
 
+function isHr(line) {
+  return /^\s*([-*_])\1{2,}\s*$/.test(line) && !line.includes("|");
+}
+
+function listItem(line) {
+  const m = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+  if (!m) return null;
+  const indent = m[1].replace(/\t/g, "    ").length;
+  return { indent, ordered: /^\d/.test(m[2]), text: m[3] };
+}
+
+function renderList(items, docPath) {
+  function nest(startIndent) {
+    const ordered = items.length && items[0].indent === startIndent ? items[0].ordered : false;
+    const tag = ordered ? "ol" : "ul";
+    const parts = [`<${tag}>`];
+    while (items.length && items[0].indent >= startIndent) {
+      if (items[0].indent > startIndent) {
+        parts.push(nest(items[0].indent));
+        continue;
+      }
+      const it = items.shift();
+      let inner = inline(it.text, docPath);
+      if (items.length && items[0].indent > it.indent) {
+        inner += nest(items[0].indent);
+      }
+      parts.push(`<li>${inner}</li>`);
+    }
+    parts.push(`</${tag}>`);
+    return parts.join("");
+  }
+  return nest(items[0].indent);
+}
+
 function inlineMarkdown(src, docPath) {
   const lines = src.split("\n");
   const out = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (isTableRow(line)) {
+    if (isHr(line)) {
+      out.push("<hr />");
+    } else if (isTableRow(line)) {
       const block = [line];
       while (i + 1 < lines.length && isTableRow(lines[i + 1])) {
         i++;
@@ -90,8 +126,14 @@ function inlineMarkdown(src, docPath) {
     } else if (/^### /.test(line)) out.push(`<h3>${inline(line.slice(4), docPath)}</h3>`);
     else if (/^## /.test(line)) out.push(`<h2>${inline(line.slice(3), docPath)}</h2>`);
     else if (/^# /.test(line)) out.push(`<h1>${inline(line.slice(2), docPath)}</h1>`);
-    else if (/^[-*] /.test(line)) out.push(`<li>${inline(line.slice(2), docPath)}</li>`);
-    else if (line.trim() === "") out.push("");
+    else if (listItem(line)) {
+      const items = [listItem(line)];
+      while (i + 1 < lines.length && listItem(lines[i + 1])) {
+        i++;
+        items.push(listItem(lines[i]));
+      }
+      out.push(renderList(items, docPath));
+    } else if (line.trim() === "") out.push("");
     else out.push(`<p>${inline(line, docPath)}</p>`);
   }
   return out.join("\n");

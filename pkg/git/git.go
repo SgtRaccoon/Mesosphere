@@ -109,7 +109,8 @@ func (c *Client) Fetch(repoPath string) error {
 
 // GetDocHistory returns commits that touched filePath, newest first.
 func (c *Client) GetDocHistory(repoPath, filePath string) ([]CommitInfo, error) {
-	out, err := c.run(repoPath, "log", "--pretty=format:%H%x09%an%x09%at%x09%s", "--", filePath)
+	filePath = filepathToGit(filePath)
+	out, err := c.run(repoPath, "log", "--follow", "--pretty=format:%H%x09%an%x09%at%x09%s", "--", filePath)
 	if err != nil {
 		return nil, err
 	}

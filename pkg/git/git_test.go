@@ -107,6 +107,36 @@ func TestCommitHistoryAndVersion(t *testing.T) {
 	}
 }
 
+func TestDocHistoryOnlyTouchesFile(t *testing.T) {
+	requireGit(t)
+	dir := t.TempDir()
+	initRepo(t, dir)
+	c := &Client{}
+
+	if err := os.WriteFile(filepath.Join(dir, "readme.md"), []byte("a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Commit(dir, "readme.md", "add readme"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "other.md"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Commit(dir, "other.md", "unrelated"); err != nil {
+		t.Fatal(err)
+	}
+	hist, err := c.GetDocHistory(dir, "readme.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hist) != 1 {
+		t.Fatalf("history len = %d, want 1 (only commits that changed the doc)", len(hist))
+	}
+	if hist[0].Message != "add readme" {
+		t.Errorf("message = %q", hist[0].Message)
+	}
+}
+
 func TestFetchPullPushAndAheadBehind(t *testing.T) {
 	requireGit(t)
 	root := t.TempDir()

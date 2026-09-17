@@ -11,6 +11,25 @@
 </template>
 
 <script>
+function taskDraft(t) {
+  const extra = t.extra_fields;
+  if (extra && typeof extra === "object" && Object.keys(extra).length) {
+    return JSON.stringify(extra, null, 2);
+  }
+  return JSON.stringify(
+    {
+      card_id: t.card_id,
+      title: t.title,
+      scope: t.scope,
+      validation_gate: t.validation_gate,
+      is_blocked: t.is_blocked,
+      blocker_ids: t.blocker_ids || [],
+      status: t.status,
+    },
+    null,
+    2,
+  );
+}
 export default {
   name: "TaskEditorModal",
   props: {
@@ -25,7 +44,7 @@ export default {
     task: {
       immediate: true,
       handler(t) {
-        this.draft = t ? JSON.stringify(JSON.parse(t.raw_content || "{}"), null, 2) : "";
+        this.draft = t ? taskDraft(t) : "";
         this.dirty = false;
       },
     },

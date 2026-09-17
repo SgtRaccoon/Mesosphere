@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -94,6 +95,33 @@ func (a *API) handleListRepos(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, repo.ListRepositories(cfg))
 }
 
+func (a *API) handleAddRepo(w http.ResponseWriter, r *http.Request) {
+	var rec config.RepositoryConfig
+	if err := json.NewDecoder(r.Body).Decode(&rec); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	cfg, err := a.LoadConfig()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	added, err := repo.AddRepository(cfg, rec)
+	if err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, repo.ErrRepoExists) {
+			status = http.StatusConflict
+		}
+		writeError(w, status, err)
+		return
+	}
+	if err := a.SaveConfig(cfg); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, added)
+}
+
 func (a *API) handleRepoStatus(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "repoID")
 	cfg, err := a.LoadConfig()
@@ -118,5 +146,6 @@ func (a *API) mountConfig(r chi.Router) {
 	r.Get("/config", a.handleGetConfig)
 	r.Post("/config", a.handlePostConfig)
 	r.Get("/repos", a.handleListRepos)
+	r.Post("/repos", a.handleAddRepo)
 	r.Get("/repos/{repoID}/status", a.handleRepoStatus)
 }
