@@ -19,50 +19,50 @@ const (
 
 // Config is the root configuration document.
 type Config struct {
-	Version      string             `yaml:"version"`
-	Settings     Settings           `yaml:"settings"`
-	Repositories []RepositoryConfig `yaml:"repositories"`
+	Version      string             `yaml:"version" json:"version"`
+	Settings     Settings           `yaml:"settings" json:"settings"`
+	Repositories []RepositoryConfig `yaml:"repositories" json:"repositories"`
 }
 
 // Settings holds server and UI preferences.
 type Settings struct {
-	Server ServerSettings `yaml:"server"`
-	UI     UISettings     `yaml:"ui"`
+	Server ServerSettings `yaml:"server" json:"server"`
+	UI     UISettings     `yaml:"ui" json:"ui"`
 }
 
 // ServerSettings controls the embedded HTTP server.
 type ServerSettings struct {
-	Port            int  `yaml:"port"`
-	AutoOpenBrowser bool `yaml:"auto_open_browser"`
+	Port            int  `yaml:"port" json:"port"`
+	AutoOpenBrowser bool `yaml:"auto_open_browser" json:"auto_open_browser"`
 }
 
 // UISettings persists UI state across sessions.
 type UISettings struct {
-	ActiveTab        string     `yaml:"active_tab"`
-	SplitViewEnabled bool       `yaml:"split_view_enabled"`
-	Panes            []PaneState `yaml:"panes"`
+	ActiveTab        string      `yaml:"active_tab" json:"active_tab"`
+	SplitViewEnabled bool        `yaml:"split_view_enabled" json:"split_view_enabled"`
+	Panes            []PaneState `yaml:"panes" json:"panes"`
 }
 
 // PaneState describes one split-view pane.
 type PaneState struct {
-	RepoID        string `yaml:"repo_id"`
-	Mode          string `yaml:"mode"` // docs | tasks
-	ActiveDocPath string `yaml:"active_doc_path,omitempty"`
+	RepoID        string `yaml:"repo_id" json:"repo_id"`
+	Mode          string `yaml:"mode" json:"mode"` // docs | tasks
+	ActiveDocPath string `yaml:"active_doc_path,omitempty" json:"active_doc_path,omitempty"`
 }
 
 // RepositoryConfig describes a registered local git repository.
 type RepositoryConfig struct {
-	ID          string            `yaml:"id"`
-	Name        string            `yaml:"name"`
-	Path        string            `yaml:"path"`
-	RemoteURL   string            `yaml:"remote_url,omitempty"`
-	Credentials CredentialsConfig `yaml:"credentials,omitempty"`
+	ID          string            `yaml:"id" json:"id"`
+	Name        string            `yaml:"name" json:"name"`
+	Path        string            `yaml:"path" json:"path"`
+	RemoteURL   string            `yaml:"remote_url,omitempty" json:"remote_url,omitempty"`
+	Credentials CredentialsConfig `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 }
 
 // CredentialsConfig holds optional git credentials for a repository.
 type CredentialsConfig struct {
-	SSHKeyPath string `yaml:"ssh_key_path,omitempty"`
-	Token      string `yaml:"token,omitempty"`
+	SSHKeyPath string `yaml:"ssh_key_path,omitempty" json:"ssh_key_path,omitempty"`
+	Token      string `yaml:"token,omitempty" json:"token,omitempty"`
 }
 
 // DefaultPath returns ~/.mesosphere/config.yaml (or MESOSPHERE_HOME/config.yaml).

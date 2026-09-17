@@ -23,19 +23,19 @@ func (e *ConflictError) Error() string {
 
 // CommitInfo is one history entry for a file.
 type CommitInfo struct {
-	Hash      string
-	Author    string
-	Timestamp time.Time
-	Message   string
+	Hash      string    `json:"hash"`
+	Author    string    `json:"author"`
+	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message"`
 }
 
 // RepoStatus describes working tree and tracking-branch divergence.
 type RepoStatus struct {
-	HasUncommitted bool
-	Ahead          int
-	Behind         int
-	Branch         string
-	Upstream       string
+	HasUncommitted bool   `json:"has_uncommitted"`
+	Ahead          int    `json:"ahead"`
+	Behind         int    `json:"behind"`
+	Branch         string `json:"branch"`
+	Upstream       string `json:"upstream"`
 }
 
 // Client executes git in a repository.
