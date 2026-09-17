@@ -19,58 +19,30 @@ Mesosphere is a single-binary, unified-architecture application written in **Go*
 
 ### High-Level Architecture Diagram
 
-```
-+-----------------------------------------------------------------------------------+
-|                                Mesosphere Binary                                  |
-|                                                                                   |
-|  +-----------------------------------------------------------------------------+  |
-|  |                             Entry Point (main.go)                           |  |
-|  |       [Arg Inspection: Cobra CLI vs Serve / Zero-Arg Default Launcher]      |  |
-|  +-------------------------------------+---------------------------------------+  |
-|                                        |                                          |
-|            +---------------------------+---------------------------+              |
-|            |                                                       |              |
-|            v                                                       v              |
-|  +-------------------+                                   +-------------------+    |
-|  |  Cobra CLI Layer  |                                   |  HTTP Server Engine|    |
-|  |  (cmd/*)          |                                   |  (net/http + chi) |    |
-|  +---------+---------+                                   +---------+---------+    |
-|            |                                                       |              |
-|            |        +----------------------------------------------+              |
-|            |        |                                              |              |
-|            |        v                                              v              |
-|            |  +-------------------+                      +-------------------+    |
-|            |  |  REST API Router  |                      | Embedded Web UI   |    |
-|            |  |  (/api/v1/*)      |                      | Static Assets     |    |
-|            |  +---------+---------+                      | (//go:embed web)  |    |
-|            |            |                                +-------------------+    |
-|            +----+   +---+                                                         |
-|                 |   |                                                             |
-|                 v   v                                                             |
-|  +-----------------------------------------------------------------------------+  |
-|  |                            Unified Logic Core                               |  |
-|  |                            (pkg/core)                                       |  |
-|  |                                                                             |  |
-|  |  +-------------------+  +-------------------+  +-------------------------+  |  |
-|  |  | Config Service    |  | Docs Engine       |  | Task Translator Engine  |  |  |
-|  |  | (pkg/core/config) |  | (pkg/core/docs)   |  | (pkg/core/tasks)        |  |  |
-|  +--+-------------------+--+-------------------+--+-------------------------+--+  |
-|     |                      |                      |                               |
-|     +----------------------+----------------------+                               |
-|                            |                                                      |
-|                            v                                                      |
-|  +-----------------------------------------------------------------------------+  |
-|  |                          Git Engine (pkg/git)                               |  |
-|  |                 Executes local git commands / libgit2                       |  |
-|  +-----------------------------------------------------------------------------+  |
-+------------------------------------+----------------------------------------------+
-                                     |
-                                     v
-                  +--------------------------------------+
-                  | Filesystem & Git Repositories        |
-                  | (~/.mesosphere/config.yaml)          |
-                  | (/path/to/repo1, /path/to/repo2)     |
-                  +--------------------------------------+
+```mermaid
+flowchart TB
+  subgraph Binary["Mesosphere Binary"]
+    Main["Entry Point (main.go)<br/>Arg inspection: Cobra CLI vs Serve / zero-arg launcher"]
+
+    Main --> CLI["Cobra CLI Layer<br/>(cmd/*)"]
+    Main --> HTTP["HTTP Server Engine<br/>(net/http + chi)"]
+
+    HTTP --> REST["REST API Router<br/>(/api/v1/*)"]
+    HTTP --> UI["Embedded Web UI<br/>Static assets (//go:embed web)"]
+
+    CLI --> Core
+    REST --> Core
+
+    subgraph Core["Unified Logic Core (pkg/core)"]
+      Config["Config Service<br/>(pkg/core/config)"]
+      Docs["Docs Engine<br/>(pkg/core/docs)"]
+      Tasks["Task Translator Engine<br/>(pkg/core/tasks)"]
+    end
+
+    Core --> Git["Git Engine (pkg/git)<br/>local git commands / libgit2"]
+  end
+
+  Git --> FS["Filesystem & Git Repositories<br/>~/.mesosphere/config.yaml<br/>/path/to/repo1, /path/to/repo2"]
 ```
 
 ### Subsystems & Responsibilities
