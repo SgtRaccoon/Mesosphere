@@ -106,7 +106,7 @@ Existing SaaS product management suites store project knowledge (docs, tasks, sp
 **Status:** Accepted
 
 ### FR-012 - UI: Native Mermaid Rendering
-**Statement:** The UI shall natively render mermaid diagrams embedded in documents.
+**Statement:** The UI shall natively render mermaid diagrams embedded in documents, with diagrams displayed correctly (valid mermaid syntax in fenced `mermaid` blocks shall produce a visible diagram, not broken or unparsed markup).
 **Priority:** Must
 **Status:** Accepted
 
@@ -233,6 +233,15 @@ Existing SaaS product management suites store project knowledge (docs, tasks, sp
 **Priority:** Must
 **Status:** Accepted
 
+### FR-035 - UI: Markdown Frontmatter / Metadata Box
+**Statement:** When a markdown document begins with metadata (YAML-style frontmatter or equivalent metadata at the top of the file), the Docs UI shall display that metadata in a visually distinct box rather than as ordinary document body text.
+**Why:** Makes document metadata scannable and distinct from prose.
+**Acceptance Criteria:**
+- Metadata at the top of a markdown file is shown in a boxed region in the rendered Docs view.
+- Remaining document body continues to render as markdown (including mermaid).
+**Priority:** Should
+**Status:** Accepted
+
 ## 7. Non-Functional Requirements
 
 - **Usability parity:** The Docs UI should be comparable in usability/familiarity to Confluence or Obsidian; the Tasks UI should be comparable to Jira or Trello. *(Status: Accepted, Source: notes)*
@@ -306,3 +315,4 @@ High-level, system-wide acceptance (in addition to per-requirement criteria abov
 ## 13. Traceability / Change Summary
 
 - **2026-09-14 — Initial creation (greenfield).** Created SPEC.md from supplied product notes (`Mesosphere.md`). All functional requirements (FR-001–FR-028) derived directly from the notes' Config file, CLI, Agent Skill, UI, and Core sections. No prior SPEC existed. Open questions recorded for items the notes did not address (auth model, conflict handling, platform support, config file format, image storage, native task file format).
+- **2026-09-17 — Enhancements.** Clarified FR-012 that mermaid must render correctly (defect vs current UI). Added FR-035: top-of-file markdown metadata displayed in a box.

@@ -80,6 +80,61 @@ body {
 .docs-nav-item.active {
   font-weight: 700;
 }
+.docs-nav-folder {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.pane-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #2a3644;
+}
+.pane-bar-repo {
+  font-weight: 600;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+}
+.pane-bar-tabs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.pane-bar-tabs button.active {
+  font-weight: 700;
+}
+.docs-main-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid #2a3644;
+  gap: 1rem;
+}
+.docs-version {
+  margin-left: auto;
+}
+.docs-main table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+.docs-main th,
+.docs-main td {
+  border: 1px solid #2a3644;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
 .docs-main {
   padding: 1rem 1.5rem;
 }
@@ -199,4 +254,26 @@ body {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
+}
+.md-meta-box {
+  display: block;
+  border: 1px solid #2a3644;
+  background: #151c24;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.25rem;
+}
+.md-meta-row {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.md-meta-key {
+  color: #7aa2f7;
+  min-width: 7rem;
+  font-weight: 600;
+}
+.md-meta-val {
+  color: #c5d0da;
 }

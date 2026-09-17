@@ -41,7 +41,7 @@ func ListTasksWith(repoPath, repoID string, translators []FrameworkTranslator) (
 	var out []CommonTask
 	err := filepath.WalkDir(repoPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return nil
 		}
 		if d.IsDir() {
 			if skipDir(d.Name()) {
@@ -55,12 +55,12 @@ func ListTasksWith(repoPath, repoID string, translators []FrameworkTranslator) (
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return nil
 		}
 		content := string(data)
 		rel, err := filepath.Rel(repoPath, path)
 		if err != nil {
-			return err
+			return nil
 		}
 		rel = filepath.ToSlash(rel)
 		tr := detect(translators, rel, content)
@@ -69,7 +69,7 @@ func ListTasksWith(repoPath, repoID string, translators []FrameworkTranslator) (
 		}
 		tasks, err := tr.Translate(rel, content, repoID)
 		if err != nil {
-			return fmt.Errorf("%s: %w", rel, err)
+			return nil
 		}
 		out = append(out, tasks...)
 		return nil

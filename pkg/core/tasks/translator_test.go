@@ -64,6 +64,15 @@ func TestTranslateJSONAndMarkdown(t *testing.T) {
 		t.Errorf("status = %q", got.Status)
 	}
 
+	write(t, dir, "docs/spec-kit.md", "# spec-kit notes\n\nNot JSON.\n")
+	list, err = ListTasks(dir, "repo-1")
+	if err != nil {
+		t.Fatalf("unparseable detected file should be skipped: %v", err)
+	}
+	if len(list) != 3 {
+		t.Fatalf("after skip got %d tasks", len(list))
+	}
+
 	done, err := GetTask(dir, "repo-1", "todo.md#2")
 	if err != nil {
 		t.Fatal(err)

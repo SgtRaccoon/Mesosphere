@@ -1,29 +1,40 @@
 import { markdownToHtml } from "./markdown.js";
 import { tasksByColumn, truncateScope } from "./kanban.js";
 import { splitOrientation } from "./split.js";
+import { buildDocTree, childDirs } from "./docs-tree.js";
 
 const app = document.getElementById("app");
 
+function emptyPane() {
+  return {
+    repo: null,
+    picking: true,
+    tab: "docs",
+    docs: [],
+    tasks: [],
+    activePath: "",
+    content: "",
+    editing: false,
+    draft: "",
+    versions: [],
+    version: "",
+    unpublished: false,
+    behind: 0,
+    syncing: false,
+    activeTask: null,
+    taskDraft: "",
+    taskDirty: false,
+    blockerTask: null,
+    openFolders: {},
+  };
+}
+
 const state = {
   repos: [],
-  selected: null,
-  tab: "docs",
-  docs: [],
-  activePath: "",
-  content: "",
-  editing: false,
-  draft: "",
-  unpublished: false,
+  split: false,
+  panes: [emptyPane(), emptyPane()],
   publishing: false,
   publishError: "",
-  tasks: [],
-  activeTask: null,
-  taskDraft: "",
-  taskDirty: false,
-  split: false,
-  blockerTask: null,
-  behind: 0,
-  syncing: false,
   pollTimer: null,
 };
 
@@ -35,217 +46,300 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-async function render() {
-  if (!app) return;
-  if (!state.selected) {
-    const cards = state.repos
-      .map(
-        (r) => `<button type="button" class="repo-card" data-id="${escapeHtml(r.id)}">
+function paneCount() {
+  return state.split ? 2 : 1;
+}
+
+function renderTree(node, paneIndex, depth) {
+  const dirs = childDirs(node);
+  let html = "";
+  for (const dir of dirs) {
+    const key = `${depth}:${dir.name}`;
+    const open = !!state.panes[paneIndex].openFolders[key];
+    html += `<div class="doc-tree-dir" style="padding-left:${depth ? 0.75 : 0}rem">
+      <button type="button" class="docs-nav-folder" data-pane="${paneIndex}" data-folder="${escapeHtml(key)}">${open ? "▾" : "▸"} ${escapeHtml(dir.name)}</button>
+      ${open ? renderTree(dir, paneIndex, depth + 1) : ""}
+    </div>`;
+  }
+  for (const file of node.files || []) {
+    const p = state.panes[paneIndex];
+    html += `<button type="button" class="docs-nav-item${file.path === p.activePath ? " active" : ""}" data-pane="${paneIndex}" data-path="${escapeHtml(file.path)}" style="padding-left:${0.5 + depth * 0.75}rem">${escapeHtml(file.name || file.path)}</button>`;
+  }
+  return html;
+}
+
+function repoCards(paneIndex) {
+  const cards = state.repos
+    .map(
+      (r) => `<button type="button" class="repo-card" data-pane="${paneIndex}" data-id="${escapeHtml(r.id)}">
             <strong>${escapeHtml(r.name || r.id)}</strong>
             <span>${escapeHtml(r.path || "")}</span>
           </button>`
-      )
-      .join("");
-    app.innerHTML = `<section class="repo-selector">
+    )
+    .join("");
+  return `<section class="repo-selector">
         <h1>Select a repository</h1>
         <div class="repo-grid">${cards || ""}</div>
         ${state.repos.length ? "" : '<p class="empty">No repositories configured.</p>'}
       </section>`;
-    app.querySelectorAll(".repo-card").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        state.selected = state.repos.find((r) => r.id === btn.dataset.id) || null;
-        state.docs = [];
-        state.activePath = "";
-        state.content = "";
-        if (state.selected) {
-          await loadDocs();
-          await loadTasks();
-          await refreshStatus();
-          startStatusPoll();
-        }
-        render();
-      });
-    });
-    return;
-  }
-  const name = escapeHtml(state.selected.name || state.selected.id);
-  let workspace = "";
-  if (state.tab === "docs") {
-    const nav = state.docs
-      .map(
-        (d) =>
-          `<button type="button" class="docs-nav-item${d.path === state.activePath ? " active" : ""}" data-path="${escapeHtml(d.path)}">${escapeHtml(d.path)}</button>`
-      )
-      .join("");
-    const html = state.editing
-      ? `<textarea class="docs-editor-textarea">${escapeHtml(state.draft)}</textarea>`
-      : markdownToHtml(state.content, state.activePath);
-    const fab = state.activePath
-      ? `<button type="button" class="docs-edit-fab">${state.editing ? "Save" : "✎"}</button>`
-      : "";
-    workspace = `<div class="docs-view">
+}
+
+function renderDocs(pane, i) {
+  const tree = buildDocTree(pane.docs);
+  const nav = renderTree(tree, i, 0);
+  const html = pane.editing
+    ? `<textarea class="docs-editor-textarea" data-pane="${i}">${escapeHtml(pane.draft)}</textarea>`
+    : markdownToHtml(pane.content, pane.activePath);
+  const fab = pane.activePath
+    ? `<button type="button" class="docs-edit-fab" data-pane="${i}">${pane.editing ? "Save" : "✎"}</button>`
+    : "";
+  const opts = (pane.versions || [])
+    .map((v) => {
+      const date = String(v.timestamp || "").slice(0, 10);
+      const name = (v.message || v.hash || "commit").split("\n")[0];
+      return `<option value="${escapeHtml(v.hash)}" ${pane.version === v.hash ? "selected" : ""}>${escapeHtml(`${name} (${date || "—"})`)}</option>`;
+    })
+    .join("");
+  const bar = pane.activePath
+    ? `<header class="docs-main-bar"><span class="docs-main-path">${escapeHtml(pane.activePath)}</span>
+        <select class="docs-version" data-pane="${i}">
+          <option value="" ${pane.version ? "" : "selected"}>HEAD</option>
+          ${opts}
+        </select></header>`
+    : "";
+  return `<div class="docs-view">
         <aside class="docs-nav">${nav}</aside>
-        <article class="docs-main">${html}</article>
+        <div class="docs-main-wrap">${bar}<article class="docs-main">${html}</article></div>
         ${fab}
       </div>`;
-  } else {
-    const { columns, map } = tasksByColumn(state.tasks);
-    workspace = `<div class="kanban">${columns
-      .map(
-        (col) => `<section class="kanban-col" data-col="${escapeHtml(col)}">
+}
+
+function renderTasks(pane, i) {
+  const { columns, map } = tasksByColumn(pane.tasks);
+  let workspace = `<div class="kanban">${columns
+    .map(
+      (col) => `<section class="kanban-col" data-col="${escapeHtml(col)}">
           <h2>${escapeHtml(col)}</h2>
           ${(map[col] || [])
-            .map(
-              (t) => {
-                const tip = (t.blocker_ids || [])
-                  .map((id) => {
-                    const b = state.tasks.find((x) => x.card_id === id);
-                    return b ? b.title || id : id;
-                  })
-                  .join(", ");
-                const badge = t.is_blocked
-                  ? `<button type="button" class="blocked-indicator" title="${escapeHtml(tip || "Blocked")}" data-blocked="${escapeHtml(t.card_id)}">⛔</button>`
-                  : "";
-                return `<article class="task-card" data-id="${escapeHtml(t.card_id)}">
+            .map((t) => {
+              const tip = (t.blocker_ids || [])
+                .map((id) => {
+                  const b = pane.tasks.find((x) => x.card_id === id);
+                  return b ? b.title || id : id;
+                })
+                .join(", ");
+              const badge = t.is_blocked
+                ? `<button type="button" class="blocked-indicator" title="${escapeHtml(tip || "Blocked")}" data-pane="${i}" data-blocked="${escapeHtml(t.card_id)}">⛔</button>`
+                : "";
+              return `<article class="task-card" data-pane="${i}" data-id="${escapeHtml(t.card_id)}">
                 <header><span class="task-id">${escapeHtml(t.card_id)}</span>
                 <span class="task-status">${escapeHtml(t.status || "")}</span></header>
                 <p class="task-title">${escapeHtml(t.title || "")}</p>
                 <p class="task-scope">${escapeHtml(truncateScope(t.scope))}</p>
                 ${badge}
               </article>`;
-              }
-            )
+            })
             .join("")}
         </section>`
-      )
-      .join("")}</div>`;
-    if (state.blockerTask) {
-      const ids = state.blockerTask.blocker_ids || [];
-      const blockers = ids.map((id) => state.tasks.find((x) => x.card_id === id) || { card_id: id, title: id });
-      workspace += `<div class="blocker-modal" role="dialog"><h2>Blocked by</h2><ul>${blockers
-        .map((b) => `<li><strong>${escapeHtml(b.card_id)}</strong> — ${escapeHtml(b.title || "")}</li>`)
-        .join("")}</ul><button type="button" class="blocker-close">Close</button></div>`;
-    }
-    if (state.activeTask) {
-      workspace += `<div class="task-editor-modal" role="dialog">
-        <h2>${escapeHtml(state.activeTask.card_id)}</h2>
-        <textarea class="task-json">${escapeHtml(state.taskDraft)}</textarea>
+    )
+    .join("")}</div>`;
+  if (pane.blockerTask) {
+    const ids = pane.blockerTask.blocker_ids || [];
+    const blockers = ids.map((id) => pane.tasks.find((x) => x.card_id === id) || { card_id: id, title: id });
+    workspace += `<div class="blocker-modal" role="dialog"><h2>Blocked by</h2><ul>${blockers
+      .map((b) => `<li><strong>${escapeHtml(b.card_id)}</strong> — ${escapeHtml(b.title || "")}</li>`)
+      .join("")}</ul><button type="button" class="blocker-close" data-pane="${i}">Close</button></div>`;
+  }
+  if (pane.activeTask) {
+    workspace += `<div class="task-editor-modal" role="dialog">
+        <h2>${escapeHtml(pane.activeTask.card_id)}</h2>
+        <textarea class="task-json" data-pane="${i}">${escapeHtml(pane.taskDraft)}</textarea>
         <footer>
-          ${state.taskDirty ? `<button type="button" class="task-save">Save</button>` : ""}
-          ${state.unpublished ? `<button type="button" class="task-publish">Publish</button>` : ""}
-          <button type="button" class="task-close">Close</button>
+          ${pane.taskDirty ? `<button type="button" class="task-save" data-pane="${i}">Save</button>` : ""}
+          ${pane.unpublished ? `<button type="button" class="task-publish" data-pane="${i}">Publish</button>` : ""}
+          <button type="button" class="task-close" data-pane="${i}">Close</button>
         </footer>
       </div>`;
-    }
   }
-  if (state.split) {
-    const orient = splitOrientation(window.innerWidth || 800, window.innerHeight || 600);
-    workspace = `<div class="split-view ${orient}"><div class="pane" data-pane="0">${workspace}</div><div class="pane" data-pane="1">${workspace}</div></div>`;
-  }
-  const publishBtn = state.unpublished
-    ? `<button type="button" class="publish-btn" ${state.publishing ? "disabled" : ""}>${state.publishing ? "Publishing…" : "Publish"}</button>`
+  return workspace;
+}
+
+function renderPane(pane, i) {
+  if (!pane.repo || pane.picking) return repoCards(i);
+  const name = escapeHtml(pane.repo.name || pane.repo.id);
+  const publishBtn = pane.unpublished
+    ? `<button type="button" class="publish-btn" data-pane="${i}" ${state.publishing ? "disabled" : ""}>${state.publishing ? "Publishing…" : "Publish"}</button>`
     : "";
+  const refresh =
+    pane.behind > 0
+      ? `<button type="button" class="refresh-icon${pane.syncing ? " spinning" : ""}" data-pane="${i}" ${pane.syncing ? "disabled" : ""} title="Remote changes available">↻</button>`
+      : "";
+  const bar = `<header class="pane-bar">
+      ${refresh}
+      <button type="button" class="pane-bar-repo" data-pane="${i}">${name}</button>
+      <nav class="pane-bar-tabs">
+        <button type="button" data-pane="${i}" data-tab="docs" class="${pane.tab === "docs" ? "active" : ""}">Docs</button>
+        <button type="button" data-pane="${i}" data-tab="tasks" class="${pane.tab === "tasks" ? "active" : ""}">Tasks</button>
+        ${publishBtn}
+      </nav>
+    </header>`;
+  const body = pane.tab === "docs" ? renderDocs(pane, i) : renderTasks(pane, i);
+  return `${bar}${body}`;
+}
+
+async function render() {
+  if (!app) return;
+  const n = paneCount();
+  let workspace = "";
+  if (n === 1) {
+    workspace = renderPane(state.panes[0], 0);
+  } else {
+    const orient = splitOrientation(window.innerWidth || 800, window.innerHeight || 600);
+    workspace = `<div class="split-view ${orient}">
+      <div class="pane" data-pane="0">${renderPane(state.panes[0], 0)}</div>
+      <div class="pane" data-pane="1">${renderPane(state.panes[1], 1)}</div>
+    </div>`;
+  }
   const modal = state.publishError
     ? `<div class="publish-modal" role="alertdialog"><p>${escapeHtml(state.publishError)}</p><button type="button" class="publish-dismiss">Close</button></div>`
     : "";
-  const refresh =
-    state.behind > 0
-      ? `<button type="button" class="refresh-icon${state.syncing ? " spinning" : ""}" ${state.syncing ? "disabled" : ""} title="Remote changes available">↻</button>`
-      : "";
   app.innerHTML = `<header class="top-bar">
-        ${refresh}
-        <div class="top-bar-left">${name}</div>
+        <div class="top-bar-left">Mesosphere</div>
         <nav class="top-bar-right">
-          <button type="button" data-tab="docs" class="${state.tab === "docs" ? "active" : ""}">Docs</button>
-          <button type="button" data-tab="tasks" class="${state.tab === "tasks" ? "active" : ""}">Tasks</button>
           <button type="button" class="split-toggle">Split View</button>
-          ${publishBtn}
         </nav>
       </header>${workspace}${modal}`;
-  app.querySelectorAll(".top-bar [data-tab]").forEach((btn) => {
+
+  bindEvents();
+}
+
+function paneFromEl(el) {
+  const i = Number(el.dataset.pane || 0);
+  return state.panes[i];
+}
+
+function bindEvents() {
+  app.querySelectorAll(".repo-card").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      state.tab = btn.dataset.tab;
-      if (state.tab === "tasks") await loadTasks();
+      const i = Number(btn.dataset.pane || 0);
+      const pane = state.panes[i];
+      pane.repo = state.repos.find((r) => r.id === btn.dataset.id) || null;
+      pane.picking = false;
+      pane.docs = [];
+      pane.activePath = "";
+      pane.content = "";
+      if (pane.repo) {
+        await loadDocs(pane);
+        await loadTasks(pane);
+        await refreshStatus(pane);
+        startStatusPoll();
+      }
+      render();
+    });
+  });
+  app.querySelectorAll(".pane-bar-repo").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      paneFromEl(btn).picking = true;
+      render();
+    });
+  });
+  app.querySelectorAll(".pane-bar [data-tab]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pane = paneFromEl(btn);
+      pane.tab = btn.dataset.tab;
+      if (pane.tab === "tasks") await loadTasks(pane);
+      render();
+    });
+  });
+  app.querySelectorAll(".docs-nav-folder").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const pane = paneFromEl(btn);
+      const key = btn.dataset.folder;
+      pane.openFolders[key] = !pane.openFolders[key];
       render();
     });
   });
   app.querySelectorAll(".docs-nav-item").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await selectDoc(btn.dataset.path);
+      await selectDoc(paneFromEl(btn), btn.dataset.path);
       render();
     });
   });
-  const fab = app.querySelector(".docs-edit-fab");
-  if (fab) {
+  app.querySelectorAll(".docs-version").forEach((sel) => {
+    sel.addEventListener("change", async () => {
+      const pane = paneFromEl(sel);
+      pane.version = sel.value;
+      await loadDocContent(pane);
+      render();
+    });
+  });
+  app.querySelectorAll(".docs-edit-fab").forEach((fab) => {
     fab.addEventListener("click", async () => {
-      if (state.editing) await saveDoc();
+      const pane = paneFromEl(fab);
+      if (pane.editing) await saveDoc(pane);
       else {
-        state.editing = true;
-        state.draft = state.content;
+        pane.editing = true;
+        pane.draft = pane.content;
       }
       render();
     });
-  }
-  const ta = app.querySelector(".docs-editor-textarea");
-  if (ta) {
+  });
+  app.querySelectorAll(".docs-editor-textarea").forEach((ta) => {
     ta.addEventListener("input", () => {
-      state.draft = ta.value;
+      paneFromEl(ta).draft = ta.value;
     });
-  }
-  const pub = app.querySelector(".publish-btn");
-  if (pub) pub.addEventListener("click", () => publishRepo());
+  });
+  app.querySelectorAll(".publish-btn").forEach((pub) => {
+    pub.addEventListener("click", () => publishRepo(paneFromEl(pub)));
+  });
   app.querySelectorAll(".blocked-indicator").forEach((el) => {
     el.addEventListener("click", (ev) => {
       ev.stopPropagation();
-      state.blockerTask = state.tasks.find((x) => x.card_id === el.dataset.blocked) || null;
+      const pane = paneFromEl(el);
+      pane.blockerTask = pane.tasks.find((x) => x.card_id === el.dataset.blocked) || null;
       render();
     });
   });
-  const blockerClose = app.querySelector(".blocker-close");
-  if (blockerClose) {
-    blockerClose.addEventListener("click", () => {
-      state.blockerTask = null;
+  app.querySelectorAll(".blocker-close").forEach((el) => {
+    el.addEventListener("click", () => {
+      paneFromEl(el).blockerTask = null;
       render();
     });
-  }
+  });
   app.querySelectorAll(".task-card").forEach((el) => {
     el.addEventListener("click", () => {
-      const t = state.tasks.find((x) => x.card_id === el.dataset.id);
+      const pane = paneFromEl(el);
+      const t = pane.tasks.find((x) => x.card_id === el.dataset.id);
       if (!t) return;
-      state.activeTask = t;
+      pane.activeTask = t;
       try {
-        state.taskDraft = JSON.stringify(JSON.parse(t.raw_content || "{}"), null, 2);
+        pane.taskDraft = JSON.stringify(JSON.parse(t.raw_content || "{}"), null, 2);
       } catch {
-        state.taskDraft = t.raw_content || "{}";
+        pane.taskDraft = t.raw_content || "{}";
       }
-      state.taskDirty = false;
+      pane.taskDirty = false;
       render();
     });
   });
-  const taskJson = app.querySelector(".task-json");
-  if (taskJson) {
+  app.querySelectorAll(".task-json").forEach((taskJson) => {
     taskJson.addEventListener("input", () => {
-      state.taskDraft = taskJson.value;
-      state.taskDirty = true;
-      const saveBtn = app.querySelector(".task-save");
-      if (!saveBtn) render();
+      const pane = paneFromEl(taskJson);
+      pane.taskDraft = taskJson.value;
+      pane.taskDirty = true;
+      if (!app.querySelector(".task-save")) render();
     });
-  }
-  const taskSave = app.querySelector(".task-save");
-  if (taskSave) taskSave.addEventListener("click", () => saveTask());
-  const taskPub = app.querySelector(".task-publish");
-  if (taskPub) taskPub.addEventListener("click", () => publishRepo());
-  const taskClose = app.querySelector(".task-close");
-  if (taskClose) {
-    taskClose.addEventListener("click", () => {
-      state.activeTask = null;
+  });
+  app.querySelectorAll(".task-save").forEach((el) => el.addEventListener("click", () => saveTask(paneFromEl(el))));
+  app.querySelectorAll(".task-publish").forEach((el) => el.addEventListener("click", () => publishRepo(paneFromEl(el))));
+  app.querySelectorAll(".task-close").forEach((el) => {
+    el.addEventListener("click", () => {
+      paneFromEl(el).activeTask = null;
       render();
     });
-  }
-  const refreshBtn = app.querySelector(".refresh-icon");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", () => syncRemote());
-  }
+  });
+  app.querySelectorAll(".refresh-icon").forEach((el) => {
+    el.addEventListener("click", () => syncRemote(paneFromEl(el)));
+  });
   const splitBtn = app.querySelector(".split-toggle");
   if (splitBtn) {
     splitBtn.addEventListener("click", () => {
@@ -262,104 +356,115 @@ async function render() {
   }
 }
 
-async function loadTasks() {
-  if (!state.selected) return;
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/tasks`);
+async function loadTasks(pane) {
+  if (!pane.repo) return;
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/tasks`);
   if (!res.ok) return;
-  state.tasks = await res.json();
+  pane.tasks = await res.json();
 }
 
-async function loadDocs() {
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/docs`);
+async function loadDocs(pane) {
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/docs`);
   if (!res.ok) return;
-  state.docs = await res.json();
+  pane.docs = await res.json();
 }
 
-async function selectDoc(path) {
-  state.activePath = path;
+async function selectDoc(pane, path) {
+  pane.activePath = path;
+  pane.version = "";
+  pane.editing = false;
   const q = new URLSearchParams({ path });
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/docs/detail?${q}`);
+  const vres = await fetch(`/api/v1/repos/${pane.repo.id}/docs/versions?${q}`);
+  pane.versions = vres.ok ? await vres.json() : [];
+  await loadDocContent(pane);
+}
+
+async function loadDocContent(pane) {
+  const q = new URLSearchParams({ path: pane.activePath });
+  if (pane.version) q.set("version", pane.version);
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/docs/detail?${q}`);
   if (!res.ok) return;
   const body = await res.json();
-  state.content = body.content || "";
-  state.editing = false;
-  state.draft = state.content;
+  pane.content = body.content || "";
+  pane.draft = pane.content;
+  pane.editing = false;
 }
 
-async function saveDoc() {
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/docs/save`, {
+async function saveDoc(pane) {
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/docs/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: state.activePath, content: state.draft }),
+    body: JSON.stringify({ path: pane.activePath, content: pane.draft }),
   });
   if (!res.ok) return;
-  state.content = state.draft;
-  state.editing = false;
-  state.unpublished = true;
+  pane.content = pane.draft;
+  pane.editing = false;
+  pane.unpublished = true;
 }
 
-async function publishRepo() {
+async function publishRepo(pane) {
   state.publishing = true;
   state.publishError = "";
   await render();
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/publish`, { method: "POST" });
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/publish`, { method: "POST" });
   state.publishing = false;
   if (res.status === 409) {
     const body = await res.json().catch(() => ({}));
     state.publishError = body.error || "Git conflict detected. Please resolve manually in repo.";
   } else if (res.ok) {
-    state.unpublished = false;
+    pane.unpublished = false;
   } else {
     state.publishError = "Publish failed";
   }
   await render();
 }
 
-async function refreshStatus() {
-  if (!state.selected) return;
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/status`);
+async function refreshStatus(pane) {
+  if (!pane.repo) return;
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/status`);
   if (!res.ok) return;
   const st = await res.json();
-  state.unpublished = !!st.ahead;
-  state.behind = st.behind || 0;
+  pane.unpublished = !!st.ahead;
+  pane.behind = st.behind || 0;
 }
 
 function startStatusPoll() {
   if (state.pollTimer) clearInterval(state.pollTimer);
   state.pollTimer = setInterval(async () => {
-    if (!state.selected) return;
-    await refreshStatus();
+    for (let i = 0; i < paneCount(); i++) {
+      if (state.panes[i].repo) await refreshStatus(state.panes[i]);
+    }
     render();
   }, 15000);
 }
 
-async function syncRemote() {
-  if (!state.selected || state.syncing) return;
-  state.syncing = true;
+async function syncRemote(pane) {
+  if (!pane.repo || pane.syncing) return;
+  pane.syncing = true;
   await render();
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/sync`, { method: "POST" });
-  state.syncing = false;
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/sync`, { method: "POST" });
+  pane.syncing = false;
   if (res.ok) {
-    state.behind = 0;
-    await loadDocs();
-    await loadTasks();
-    if (state.activePath) await selectDoc(state.activePath);
+    pane.behind = 0;
+    await loadDocs(pane);
+    await loadTasks(pane);
+    if (pane.activePath) await loadDocContent(pane);
   }
-  await refreshStatus();
+  await refreshStatus(pane);
   await render();
 }
 
-async function saveTask() {
-  if (!state.selected || !state.activeTask) return;
-  const res = await fetch(`/api/v1/repos/${state.selected.id}/tasks/${state.activeTask.card_id}/save`, {
+async function saveTask(pane) {
+  if (!pane.repo || !pane.activeTask) return;
+  const res = await fetch(`/api/v1/repos/${pane.repo.id}/tasks/${pane.activeTask.card_id}/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ raw_json: state.taskDraft }),
+    body: JSON.stringify({ raw_json: pane.taskDraft }),
   });
   if (!res.ok) return;
-  state.taskDirty = false;
-  state.unpublished = true;
-  await loadTasks();
+  pane.taskDirty = false;
+  pane.unpublished = true;
+  await loadTasks(pane);
   await render();
 }
 

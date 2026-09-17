@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const dir = dirname(fileURLToPath(import.meta.url));
 const selector = readFileSync(join(dir, "RepoSelector.vue"), "utf8");
 const topBar = readFileSync(join(dir, "TopBar.vue"), "utf8");
+const paneBar = readFileSync(join(dir, "PaneBar.vue"), "utf8");
 const docsView = readFileSync(join(dir, "DocsView.vue"), "utf8");
 const mermaidView = readFileSync(join(dir, "MermaidRenderer.vue"), "utf8");
 
@@ -19,9 +20,14 @@ assert(selector.includes("repo-grid"), "RepoSelector missing box-grid");
 assert(selector.includes("repos"), "RepoSelector must list repos");
 assert(selector.includes("update:modelValue"), "RepoSelector must emit selection");
 assert(topBar.includes("top-bar"), "TopBar missing top-bar");
-assert(topBar.includes("Docs") && topBar.includes("Tasks"), "TopBar missing Docs/Tasks tabs");
-assert(topBar.includes("repo.name"), "TopBar must show selected repo name");
+assert(topBar.includes("Mesosphere"), "TopBar must show app name");
+assert(!topBar.includes("Docs"), "TopBar should not include Docs tab");
+assert(paneBar.includes("Docs") && paneBar.includes("Tasks"), "PaneBar missing Docs/Tasks tabs");
+assert(paneBar.includes("repo.name"), "PaneBar must show selected repo name");
+assert(paneBar.includes("open-repos"), "PaneBar click opens repo cards");
 assert(docsView.includes("docs-nav"), "DocsView missing left-hand menu");
+assert(docsView.includes("docs-version"), "DocsView missing version dropdown");
+assert(docsView.includes("DocTreeNode"), "DocsView missing directory tree");
 assert(docsView.includes("markdownToHtml"), "DocsView must render markdown");
 assert(mermaidView.includes("renderMermaid"), "MermaidRenderer must render diagrams");
 
@@ -30,6 +36,23 @@ const html = markdownToHtml("# Title\n\n![img](pic.png)\n\n```mermaid\ngraph TD\
 assert(html.includes("<h1>"), "markdown heading");
 assert(html.includes("<svg"), "mermaid svg");
 assert(html.includes("docs/pic.png"), "relative image");
+const tableHtml = markdownToHtml("| A | B |\n| --- | --- |\n| 1 | 2 |\n", "x.md");
+assert(tableHtml.includes("<table>"), "markdown table");
+assert(tableHtml.includes("<th>"), "markdown table header");
+const labeledMermaid = markdownToHtml(
+  "```mermaid\nflowchart LR\nA[Start] --> B{Decision}\nB --> C[Done]\n```\n",
+  "x.md",
+);
+assert(labeledMermaid.includes("<svg"), "labeled mermaid svg");
+assert(labeledMermaid.includes("Start"), "mermaid node label");
+const metaHtml = markdownToHtml("---\ntitle: Hello\nstatus: draft\n---\n# Body\n", "x.md");
+assert(metaHtml.includes("md-meta-box"), "frontmatter box");
+assert(metaHtml.includes("title"), "frontmatter key");
+assert(metaHtml.includes("<h1>"), "body after frontmatter");
+const { buildDocTree, childDirs } = await import("../assets/docs-tree.js");
+const tree = buildDocTree([{ path: "docs/a.md" }, { path: "docs/sub/b.md" }]);
+assert(childDirs(tree)[0].name === "docs", "tree root folder");
+assert(childDirs(childDirs(tree)[0]).length === 1, "nested folder");
 
 const editor = readFileSync(join(dir, "DocsEditor.vue"), "utf8");
 const publish = readFileSync(join(dir, "PublishButton.vue"), "utf8");
@@ -63,6 +86,7 @@ const appVue = readFileSync(join(dir, "../App.vue"), "utf8");
 assert(split.includes("split-view"), "split view class");
 assert(split.includes("row") && split.includes("col"), "row/col orientation");
 assert(appVue.includes("Split View"), "split toggle");
+assert(appVue.includes("PaneWorkspace"), "independent pane workspaces");
 const { splitOrientation } = await import("../assets/split.js");
 assert(splitOrientation(1200, 800) === "row", "wide viewport is row");
 assert(splitOrientation(600, 900) === "col", "tall viewport is col");

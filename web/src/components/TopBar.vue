@@ -1,9 +1,8 @@
 <template>
-  <header class="top-bar" v-if="repo">
-    <div class="top-bar-left">{{ repo.name || repo.id }}</div>
+  <header class="top-bar">
+    <div class="top-bar-left">Mesosphere</div>
     <nav class="top-bar-right">
-      <button type="button" :class="{ active: tab === 'docs' }" @click="$emit('update:tab', 'docs')">Docs</button>
-      <button type="button" :class="{ active: tab === 'tasks' }" @click="$emit('update:tab', 'tasks')">Tasks</button>
+      <slot />
     </nav>
   </header>
 </template>
@@ -11,11 +10,6 @@
 <script>
 export default {
   name: "TopBar",
-  props: {
-    repo: { type: Object, default: null },
-    tab: { type: String, default: "docs" },
-  },
-  emits: ["update:tab"],
 };
 </script>
 
@@ -33,8 +27,5 @@ export default {
 .top-bar-right {
   display: flex;
   gap: 0.5rem;
-}
-.top-bar-right button.active {
-  font-weight: 700;
 }
 </style>

@@ -1,47 +1,39 @@
 <template>
   <div id="app-root">
-    <TopBar v-if="selected" :repo="selected" :tab="tab" @update:tab="tab = $event">
+    <TopBar>
       <button type="button" class="split-toggle" @click="split = !split">Split View</button>
     </TopBar>
-    <SplitView v-if="split && selected" :panes="panes">
-      <template #default="{ pane }">
-        <DocsView v-if="pane.tab === 'docs'" :repo-id="pane.repoId" :docs="docs" />
-        <KanbanBoard v-else :tasks="tasks" />
+    <SplitView v-if="split" :panes="panes">
+      <template #default="{ pane, index }">
+        <PaneWorkspace :pane="pane" :repos="repos" @update="updatePane(index, $event)" />
       </template>
     </SplitView>
-    <DocsView v-else-if="selected && tab === 'docs'" :repo-id="selected.id" :docs="docs" />
-    <KanbanBoard v-else-if="selected" :tasks="tasks" />
-    <RepoSelector v-else :repos="repos" v-model="selected" />
+    <PaneWorkspace v-else :pane="panes[0]" :repos="repos" @update="updatePane(0, $event)" />
   </div>
 </template>
 
 <script>
 import TopBar from "./components/TopBar.vue";
-import RepoSelector from "./components/RepoSelector.vue";
 import SplitView from "./components/SplitView.vue";
-import DocsView from "./components/DocsView.vue";
-import KanbanBoard from "./components/KanbanBoard.vue";
+import PaneWorkspace from "./components/PaneWorkspace.vue";
+
+function emptyPane() {
+  return { repo: null, tab: "docs", picking: true };
+}
 
 export default {
   name: "App",
-  components: { TopBar, RepoSelector, SplitView, DocsView, KanbanBoard },
+  components: { TopBar, SplitView, PaneWorkspace },
   data() {
     return {
       repos: [],
-      selected: null,
-      tab: "docs",
       split: false,
-      docs: [],
-      tasks: [],
+      panes: [emptyPane(), emptyPane()],
     };
   },
-  computed: {
-    panes() {
-      const id = this.selected && this.selected.id;
-      return [
-        { repoId: id, tab: this.tab },
-        { repoId: id, tab: this.tab === "docs" ? "tasks" : "docs" },
-      ];
+  methods: {
+    updatePane(index, patch) {
+      this.panes[index] = { ...this.panes[index], ...patch };
     },
   },
 };
