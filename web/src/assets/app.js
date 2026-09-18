@@ -49,6 +49,8 @@ function icon(name) {
     upload:
       '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />',
     save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
+    "chevron-down": '<path d="m6 9 6 6 6-6" />',
   }[name];
   return `<svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
@@ -131,7 +133,7 @@ function renderDocs(pane, i) {
     ? `<textarea class="docs-editor-textarea" data-pane="${i}">${escapeHtml(pane.draft)}</textarea>`
     : markdownToHtml(pane.content, pane.activePath);
   const fab = pane.activePath
-    ? `<button type="button" class="docs-edit-fab" data-pane="${i}">${pane.editing ? icon("save") + " Save" : icon("file-text") + " Edit"}</button>`
+    ? `<button type="button" class="docs-edit-fab" data-pane="${i}" title="${pane.editing ? 'Save' : 'Edit'}">${pane.editing ? icon("save") : icon("pencil")}</button>`
     : "";
   const opts = (pane.versions || [])
     .map((v) => {
@@ -140,12 +142,15 @@ function renderDocs(pane, i) {
       return `<option value="${escapeHtml(v.hash)}" ${pane.version === v.hash ? "selected" : ""}>${escapeHtml(`${name} (${date || "—"})`)}</option>`;
     })
     .join("");
-  const bar = pane.activePath
-    ? `<header class="docs-main-bar"><span class="docs-main-path">${escapeHtml(pane.activePath)}</span>
-        <select class="docs-version" data-pane="${i}">
+  const versionSelect = (pane.versions || []).length > 1
+    ? `<label class="docs-version-wrap"><select class="docs-version" data-pane="${i}">
           <option value="" ${pane.version ? "" : "selected"}>HEAD</option>
           ${opts}
-        </select></header>`
+        </select>${icon("chevron-down")}</label>`
+    : "";
+  const bar = pane.activePath
+    ? `<header class="docs-main-bar"><span class="docs-main-path">${escapeHtml(pane.activePath)}</span>
+        ${versionSelect}</header>`
     : "";
   return `<div class="docs-view">
         <aside class="docs-nav">${nav}</aside>
@@ -159,7 +164,7 @@ function renderTasks(pane, i) {
   let workspace = `<div class="kanban">${columns
     .map(
       (col) => `<section class="kanban-col" data-col="${escapeHtml(col)}">
-          <h2>${escapeHtml(col)}</h2>
+          <h2><span>${escapeHtml(col)}</span><span class="kanban-col-count">${(map[col] || []).length}</span></h2>
           ${(map[col] || [])
             .map((t) => {
               const tip = (t.blocker_ids || [])

@@ -6,12 +6,15 @@
     <div class="docs-main-wrap">
       <header class="docs-main-bar" v-if="activePath">
         <span class="docs-main-path">{{ activePath }}</span>
-        <select class="docs-version" v-model="version" @change="loadContent">
-          <option value="">HEAD</option>
-          <option v-for="v in versions" :key="v.hash" :value="v.hash">
-            {{ versionLabel(v) }}
-          </option>
-        </select>
+        <label class="docs-version-wrap" v-if="versions.length > 1">
+          <select class="docs-version" v-model="version" @change="loadContent">
+            <option value="">HEAD</option>
+            <option v-for="v in versions" :key="v.hash" :value="v.hash">
+              {{ versionLabel(v) }}
+            </option>
+          </select>
+          <Icon name="chevron-down" />
+        </label>
       </header>
       <article class="docs-main" v-html="html"></article>
     </div>
@@ -22,10 +25,11 @@
 import { markdownToHtml } from "../assets/markdown.js";
 import { buildDocTree } from "../assets/docs-tree.js";
 import DocTreeNode from "./DocTreeNode.vue";
+import Icon from "./Icon.vue";
 
 export default {
   name: "DocsView",
-  components: { DocTreeNode },
+  components: { DocTreeNode, Icon },
   props: {
     repoId: { type: String, required: true },
     docs: { type: Array, default: () => [] },
@@ -91,8 +95,35 @@ export default {
   padding: 0.5rem 1.5rem;
   border-bottom: 1px solid #2a3644;
 }
-.docs-version {
+.docs-version-wrap {
   margin-left: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.docs-version-wrap .icon {
+  position: absolute;
+  right: 0.35rem;
+  pointer-events: none;
+}
+.docs-version {
+  text-align: right;
+  text-align-last: right;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.25rem 1.5rem 0.25rem 0.4rem;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.docs-version:hover,
+.docs-version:focus {
+  background: #1a222c;
+  border-color: #2a3644;
+  outline: none;
 }
 .docs-main {
   padding: 1rem 1.5rem;
