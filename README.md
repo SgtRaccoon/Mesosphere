@@ -69,6 +69,7 @@ CLI commands that need a repo use **`--repo <id-or-path>`**, or the current work
 | `mesosphere` / `mesosphere serve` | Start UI + API; optional `--addr`, `--no-browser` |
 | `mesosphere repo list` | Configured repositories (table) |
 | `mesosphere repo list --json` | Same as JSON |
+| `mesosphere repo add --path <dir>` | Append a repo to config (`--id`, `--name`, `--remote` optional) |
 | `mesosphere doc list [--repo]` | `.md` / `.txt` files |
 | `mesosphere doc versions <path> [--repo]` | Git history for a document |
 | `mesosphere doc get <path> [--version <hash>] [--repo]` | Working tree or historical content |
@@ -96,6 +97,7 @@ Publish shows a spinner while running and a conflict dialog on HTTP 409.
 | --- | --- | --- |
 | GET/POST | `/config` | Read/update config + UI state |
 | GET | `/repos` | List repositories |
+| POST | `/repos` | Add a repository (201; 409 if id exists) |
 | GET | `/repos/{id}/status` | Dirty tree, ahead/behind |
 | POST | `/repos/{id}/sync` | `git pull` |
 | POST | `/repos/{id}/publish` | pull then push (409 on conflict) |
