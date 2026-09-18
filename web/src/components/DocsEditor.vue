@@ -28,7 +28,8 @@ export default {
 
 <style scoped>
 .docs-edit-fab {
-  position: fixed;
+  position: absolute;
+  z-index: 2;
   right: 1.5rem;
   bottom: 1.5rem;
   width: 3rem;

@@ -37,7 +37,9 @@ export default {
 <style scoped>
 .split-view {
   display: flex;
-  min-height: 50vh;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .split-view.row {
   flex-direction: row;
@@ -46,9 +48,12 @@ export default {
   flex-direction: column;
 }
 .pane {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 </style>

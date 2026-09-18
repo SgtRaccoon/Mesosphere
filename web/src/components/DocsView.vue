@@ -1,6 +1,9 @@
 <template>
   <div class="docs-view">
     <aside class="docs-nav">
+      <button type="button" class="docs-new" @click="newDoc">
+        <Icon name="file-plus-corner" /> New Document
+      </button>
       <DocTreeNode :node="tree" :active-path="activePath" :depth="0" @select="select" />
     </aside>
     <div class="docs-main-wrap">
@@ -51,6 +54,14 @@ export default {
       const name = (v.message || v.hash || "").split("\n")[0];
       return `${name || "commit"} (${date || "—"})`;
     },
+    newDoc() {
+      const path = window.prompt("New document path", "docs/untitled.md");
+      if (!path) return;
+      this.activePath = path.trim();
+      this.version = "";
+      this.versions = [];
+      this.content = "# Untitled\n\n";
+    },
     async select(doc) {
       this.activePath = doc.path;
       this.version = "";
@@ -82,11 +93,34 @@ export default {
 .docs-view {
   display: grid;
   grid-template-columns: 240px 1fr;
-  min-height: 60vh;
+  min-height: 0;
+  height: 100%;
 }
 .docs-nav {
   border-right: 1px solid #2a3644;
   padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.docs-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f1419;
+  color: inherit;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.docs-new:hover {
+  background: #1a222c;
+  color: #7aa2f7;
 }
 .docs-main-bar {
   display: flex;

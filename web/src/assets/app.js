@@ -51,6 +51,7 @@ function icon(name) {
     save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
     pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
     "chevron-down": '<path d="m6 9 6 6 6-6" />',
+    "file-plus-corner": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M9 15h6" /><path d="M12 18v-6" />',
   }[name];
   return `<svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
@@ -85,11 +86,11 @@ function renderTree(node, paneIndex, depth) {
   return html;
 }
 
-function repoStatsLabel(id) {
+function repoStatsHtml(id) {
   const st = state.repoStats[id] || {};
   const docs = st.docs != null ? st.docs : "…";
   const tasks = st.tasks != null ? st.tasks : "…";
-  return `${docs} docs · ${tasks} tasks`;
+  return `<span class="repo-stat">${icon("file-text")} ${escapeHtml(String(docs))}</span><span class="repo-stat">${icon("list-todo")} ${escapeHtml(String(tasks))}</span>`;
 }
 
 function repoCards(paneIndex) {
@@ -97,8 +98,8 @@ function repoCards(paneIndex) {
     .map(
       (r) => `<button type="button" class="repo-card" data-pane="${paneIndex}" data-id="${escapeHtml(r.id)}">
             <strong>${escapeHtml(r.name || r.id)}</strong>
-            <span>${escapeHtml(r.path || "")}</span>
-            <span class="repo-card-meta">${escapeHtml(repoStatsLabel(r.id))}</span>
+            <span class="repo-card-path">${escapeHtml(r.path || "")}</span>
+            <span class="repo-card-meta">${repoStatsHtml(r.id)}</span>
           </button>`
     )
     .join("");
@@ -152,11 +153,10 @@ function renderDocs(pane, i) {
     ? `<header class="docs-main-bar"><span class="docs-main-path">${escapeHtml(pane.activePath)}</span>
         ${versionSelect}</header>`
     : "";
-  return `<div class="docs-view">
-        <aside class="docs-nav">${nav}</aside>
+  return { html: `<div class="docs-view">
+        <aside class="docs-nav"><button type="button" class="docs-new" data-pane="${i}">${icon("file-plus-corner")} New Document</button>${nav}</aside>
         <div class="docs-main-wrap">${bar}<article class="docs-main">${html}</article></div>
-        ${fab}
-      </div>`;
+      </div>`, fab };
 }
 
 function renderTasks(pane, i) {
@@ -210,7 +210,7 @@ function renderTasks(pane, i) {
 }
 
 function renderPane(pane, i) {
-  if (!pane.repo || pane.picking) return repoCards(i);
+  if (!pane.repo || pane.picking) return `<div class="pane-body">${repoCards(i)}</div>`;
   const name = escapeHtml(pane.repo.name || pane.repo.id);
   const publishBtn = pane.unpublished
     ? `<button type="button" class="publish-btn" data-pane="${i}" ${state.publishing ? "disabled" : ""}>${icon("upload")} ${state.publishing ? "Publishing…" : "Publish"}</button>`
@@ -228,8 +228,16 @@ function renderPane(pane, i) {
       </nav>
       ${publishBtn}
     </header>`;
-  const body = pane.tab === "docs" ? renderDocs(pane, i) : renderTasks(pane, i);
-  return `${bar}${body}`;
+  let fab = "";
+  let body;
+  if (pane.tab === "docs") {
+    const docs = renderDocs(pane, i);
+    body = docs.html;
+    fab = docs.fab;
+  } else {
+    body = renderTasks(pane, i);
+  }
+  return `${bar}<div class="pane-body">${body}</div>${fab}`;
 }
 
 async function render() {
@@ -237,7 +245,7 @@ async function render() {
   const n = paneCount();
   let workspace = "";
   if (n === 1) {
-    workspace = renderPane(state.panes[0], 0);
+    workspace = `<div class="pane">${renderPane(state.panes[0], 0)}</div>`;
   } else {
     const orient = splitOrientation(window.innerWidth || 800, window.innerHeight || 600);
     workspace = `<div class="split-view ${orient}">
@@ -322,6 +330,12 @@ function bindEvents() {
       const pane = paneFromEl(btn);
       pane.tab = btn.dataset.tab;
       if (pane.tab === "tasks") await loadTasks(pane);
+      render();
+    });
+  });
+  app.querySelectorAll(".docs-new").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await newDoc(paneFromEl(btn));
       render();
     });
   });
@@ -439,13 +453,32 @@ async function loadDocs(pane) {
   pane.docs = await res.json();
 }
 
+async function newDoc(pane) {
+  const path = window.prompt("New document path", "docs/untitled.md");
+  if (!path) return;
+  pane.activePath = path.trim();
+  pane.version = "";
+  pane.versions = [];
+  pane.content = "";
+  pane.draft = "# Untitled\n\n";
+  pane.editing = true;
+}
+
+async function loadDocVersions(pane) {
+  if (!pane.repo || !pane.activePath) {
+    pane.versions = [];
+    return;
+  }
+  const q = new URLSearchParams({ path: pane.activePath });
+  const vres = await fetch(`/api/v1/repos/${pane.repo.id}/docs/versions?${q}`);
+  pane.versions = vres.ok ? await vres.json() : [];
+}
+
 async function selectDoc(pane, path) {
   pane.activePath = path;
   pane.version = "";
   pane.editing = false;
-  const q = new URLSearchParams({ path });
-  const vres = await fetch(`/api/v1/repos/${pane.repo.id}/docs/versions?${q}`);
-  pane.versions = vres.ok ? await vres.json() : [];
+  await loadDocVersions(pane);
   await loadDocContent(pane);
 }
 
@@ -470,6 +503,9 @@ async function saveDoc(pane) {
   pane.content = pane.draft;
   pane.editing = false;
   pane.unpublished = true;
+  pane.version = "";
+  await loadDocs(pane);
+  await loadDocVersions(pane);
 }
 
 async function publishRepo(pane) {

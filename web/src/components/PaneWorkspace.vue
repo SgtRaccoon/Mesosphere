@@ -31,3 +31,19 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.pane-workspace {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.pane-workspace > :not(.pane-bar) {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+</style>

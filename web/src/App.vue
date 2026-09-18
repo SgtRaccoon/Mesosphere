@@ -41,3 +41,19 @@ export default {
   },
 };
 </script>
+
+<style>
+html, body, #app, #app-root {
+  height: 100%;
+}
+#app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+#app-root > .pane-workspace {
+  flex: 1;
+  min-height: 0;
+}
+</style>

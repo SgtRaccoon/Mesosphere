@@ -10,8 +10,11 @@
         @click="$emit('update:modelValue', repo)"
       >
         <strong>{{ repo.name || repo.id }}</strong>
-        <span>{{ repo.path }}</span>
-        <span class="repo-card-meta">{{ statsLabel(repo) }}</span>
+        <span class="repo-card-path">{{ repo.path }}</span>
+        <span class="repo-card-meta">
+          <span class="repo-stat"><Icon name="file-text" /> {{ count(repo, "doc") }}</span>
+          <span class="repo-stat"><Icon name="list-todo" /> {{ count(repo, "task") }}</span>
+        </span>
       </button>
     </div>
     <p v-if="!repos.length" class="empty">No repositories configured.</p>
@@ -19,18 +22,20 @@
 </template>
 
 <script>
+import Icon from "./Icon.vue";
+
 export default {
   name: "RepoSelector",
+  components: { Icon },
   props: {
     repos: { type: Array, default: () => [] },
     modelValue: { type: Object, default: null },
   },
   emits: ["update:modelValue"],
   methods: {
-    statsLabel(repo) {
-      const d = repo.doc_count != null ? repo.doc_count : "…";
-      const t = repo.task_count != null ? repo.task_count : "…";
-      return `${d} docs · ${t} tasks`;
+    count(repo, kind) {
+      const key = kind === "doc" ? "doc_count" : "task_count";
+      return repo[key] != null ? repo[key] : "…";
     },
   },
 };
@@ -39,30 +44,34 @@ export default {
 <style scoped>
 .repo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
 }
 .repo-card {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
   text-align: left;
-  padding: 1rem;
+  padding: 1.5rem 1.35rem;
+  min-height: 9rem;
   border: 1px solid #2a3644;
   background: #1a222c;
   color: inherit;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   min-width: 0;
   overflow: hidden;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 .repo-card > strong,
-.repo-card > span {
+.repo-card-path {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.repo-card > strong {
+  font-size: 1.1rem;
 }
 .repo-card:hover {
   border-color: #7aa2f7;
@@ -70,7 +79,16 @@ export default {
   transform: translateY(-2px);
 }
 .repo-card-meta {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: auto;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.repo-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 </style>
